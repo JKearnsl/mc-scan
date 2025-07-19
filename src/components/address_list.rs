@@ -1,14 +1,16 @@
-use crate::styles::scrollable_style;
+use iced::widget::scrollable::{default as ScrollableStyleDefault, Rail, Scroller, Status as ScrollableStatus, Style as ScrollableStyle};
 use iced::border::Radius;
 use iced::widget::button::{Status as ButtonStatus, Style as ButtonStyle};
 use iced::widget::container::Style as ContainerStyle;
-use iced::widget::text_input::Status;
 use iced::widget::text_input::Style as TextInputStyle;
-use iced::widget::{button, column, container, horizontal_space, row, scrollable, text, text_input};
-use iced::{Background, Border, Center, Color, Element, Fill, Padding, Shadow, Shrink, Theme, Vector};
+use iced::widget::text_input::Status as TextInputStatus;
+use iced::widget::{button, column, container, horizontal_space, row, scrollable, svg, text, text_input};
+use iced::{border, color, Background, Border, Center, Color, ContentFit, Element, Fill, Padding, Shadow, Shrink, Theme, Vector};
 use ipnet::{IpNet, Ipv4Net, Ipv6Net};
 use std::net::IpAddr;
 use std::str::FromStr;
+use iced::Length::Fixed;
+use crate::styles::icon_button_style;
 
 #[derive(Debug, Clone)]
 pub enum AddressListMessage {
@@ -71,7 +73,7 @@ impl AddressList {
             address_input = address_input.style(input_style_err);
         }
 
-        let add_button = button("Add")
+        let add_button = button("+")
             .on_press(AddressListMessage::AddClicked)
             .padding(Padding {
                 top: 5.0,
@@ -90,6 +92,11 @@ impl AddressList {
                 left: 10.0,
             }).spacing(5);
 
+        let handle = svg::Handle::from_path(format!(
+            "{}/assets/trash.svg",
+            env!("CARGO_MANIFEST_DIR")
+        ));
+
         for (i, ip_net) in self.values.iter().enumerate() {
             addresses = addresses.push(
                 row![
@@ -98,9 +105,19 @@ impl AddressList {
                         IpNet::V6(net) => format!("{}", net),
                     }),
                     horizontal_space(),
-                    button("-")
+                    button(svg(handle.clone())
+                        .content_fit(ContentFit::Fill)
+                        .width(Fill)
+                        .height(Fill)
+                        .style(|_theme, _status| svg::Style {
+                            color: Some(color!(0x9f3838))
+                        })
+                    )
+                        .style(icon_button_style)
+                        .padding(Padding::ZERO)
+                        .width(Fixed(24.0))
+                        .height(Fixed(24.0))
                         .on_press(AddressListMessage::RemoveClicked(i))
-                        .style(add_button_style)
                 ]
                     .spacing(10)
                     .align_y(Center)
@@ -114,9 +131,7 @@ impl AddressList {
                 .spacing(10)
                 .width(Fill)
                 .height(Fill)
-        ]
-            .spacing(1)
-        )
+        ])
             .style(style)
             .center_x(Fill)
             .center_y(Fill)
@@ -126,175 +141,117 @@ impl AddressList {
 
 
 
-pub fn style(theme: &Theme) -> ContainerStyle {
-    match theme {
-        Theme::Dark => {
-            ContainerStyle {
-                border: Border {
-                    color: Color::parse("#949494").unwrap(),
-                    width: 0.0,
-                    radius: Radius::from(5),
-                },
-                shadow: Shadow {
-                    color: Color::parse("#949494").unwrap(),
-                    offset: Vector::new(0.0, 0.0),
-                    blur_radius: 3.0,
-                },
-                ..ContainerStyle::default()
-            }
-        }
-        _ => {
-            ContainerStyle {
-                border: Border {
-                    color: Color::parse("#ececec").unwrap(),
-                    width: 0.5,
-                    radius: Radius::from(5),
-                },
-                shadow: Shadow {
-                    color: Color::parse("#C9A798").unwrap(),
-                    offset: Vector::new(0.0, 0.0),
-                    blur_radius: 3.0,
-                },
-                ..ContainerStyle::default()
-            }
-        }
-    }
-}
-
-pub fn input_style(theme: &Theme, _: Status) -> TextInputStyle {
-    match theme {
-        Theme::Dark => TextInputStyle {
-            background: Background::Color(Color::TRANSPARENT),
-            border: Border {
-                radius: 5.0.into(),
-                width: 0.0,
-                color: Color::TRANSPARENT,
-            },
-            icon: Color::TRANSPARENT,
-            placeholder: Color::parse("#4f4f4f").unwrap(),
-            value: Color::WHITE,
-            selection: Color::parse("#4f4f4f").unwrap(),
+pub fn style(_: &Theme) -> ContainerStyle {
+    ContainerStyle {
+        background: Option::from(Background::Color(Color::parse("#d7baa0").unwrap())),
+        border: Border {
+            color: Color::parse("#a4876d").unwrap(),
+            width: 5.0,
+            radius: Radius::from(5),
         },
-        _ => TextInputStyle {
-            background: Background::Color(Color::TRANSPARENT),
-            border: Border {
-                radius: 5.0.into(),
-                width: 0.0,
-                color: Color::TRANSPARENT,
-            },
-            icon: Color::TRANSPARENT,
-            placeholder: Color::parse("#dbdbdb").unwrap(),
-            value: Color::BLACK,
-            selection: Color::parse("#dbdbdb").unwrap(),
-        }
-    }
-}
-
-pub fn input_style_err(theme: &Theme, _: Status) -> TextInputStyle {
-    match theme {
-        Theme::Dark => TextInputStyle {
-            value: Color::parse("#d12e2e").unwrap(),
-            ..input_style(theme, Status::Active)
+        shadow: Shadow {
+            color: Color::parse("#a4876d").unwrap(),
+            offset: Vector::new(0.0, 0.0),
+            blur_radius: 1.0,
         },
-        _ => TextInputStyle {
-            value: Color::parse("#ff0000").unwrap(),
-            ..input_style(theme, Status::Active)
-        }
+        text_color: Option::from(Color::parse("#665e1d").unwrap()),
+        ..ContainerStyle::default()
     }
 }
 
-pub fn input_container_style(theme: &Theme) -> ContainerStyle {
-    match theme {
-        Theme::Dark => {
-            ContainerStyle {
-                border: Border {
-                    color: Color::parse("#949494").unwrap(),
-                    width: 0.5,
-                    radius: Radius::from(5),
-                },
-                shadow: Shadow {
-                    color: Color::TRANSPARENT,
-                    offset: Vector::new(0.0, 0.0),
-                    blur_radius: 0.0,
-                },
-                ..ContainerStyle::default()
-            }
-        }
-        _ => {
-            ContainerStyle {
-                border: Border {
-                    color: Color::parse("#ececec").unwrap(),
-                    width: 1.0,
-                    radius: Radius::from(5),
-                },
-                shadow: Shadow {
-                    color: Color::TRANSPARENT,
-                    offset: Vector::new(0.0, 0.0),
-                    blur_radius: 0.0,
-                },
-                ..ContainerStyle::default()
-            }
-        }
-    }
-}
-
-pub fn add_button_style(theme: &Theme, status: ButtonStatus) -> ButtonStyle {
-    let active = match theme {
-        Theme::Dark => ButtonStyle {
-            background: Option::from(Background::Color(Color::parse("#2E2E2E").unwrap())),
-            text_color:  Color::parse("#ffffff").unwrap(),
-            border: Border {
-                color: Color::parse("#949494").unwrap(),
-                width: 0.5,
-                radius: Radius::from(5),
-            },
-            shadow: Shadow {
-                color: Color::TRANSPARENT,
-                offset: Vector::new(0.0, 0.0),
-                blur_radius: 0.0,
-            },
+pub fn input_style(_: &Theme, _: TextInputStatus) -> TextInputStyle {
+    TextInputStyle {
+        background: Background::Color(Color::TRANSPARENT),
+        border: Border {
+            radius: 5.0.into(),
+            width: 0.0,
+            color: Color::TRANSPARENT,
         },
-        _ => ButtonStyle {
-            background: Option::from(Background::Color(Color::parse("#ffffff").unwrap())),
-            text_color:  Color::parse("#2E2E2E").unwrap(),
-            border: Border {
-                color: Color::parse("#ececec").unwrap(),
-                width: 1.0,
-                radius: Radius::from(5),
-            },
-            shadow: Shadow {
-                color: Color::TRANSPARENT,
-                offset: Vector::new(0.0, 0.0),
-                blur_radius: 0.0,
-            },
-        }
+        icon: Color::TRANSPARENT,
+        placeholder: Color::parse("#c0b7af").unwrap(),
+        value: Color::parse("#e3dca5").unwrap(),
+        selection: Color::parse("#c0b7af").unwrap(),
+    }
+}
+
+pub fn input_style_err(theme: &Theme, _: TextInputStatus) -> TextInputStyle {
+    TextInputStyle {
+        value: Color::parse("#990000").unwrap(),
+        ..input_style(theme, TextInputStatus::Active)
+    }
+}
+
+pub fn input_container_style(_: &Theme) -> ContainerStyle {
+    ContainerStyle {
+        background: Option::from(Background::Color(Color::parse("#a4876d").unwrap())),
+        border: Border {
+            color: Color::parse("#a4876d").unwrap(),
+            width: 5.0,
+            radius: Radius::from(5),
+        },
+        shadow: Shadow {
+            color: Color::TRANSPARENT,
+            offset: Vector::new(0.0, 0.0),
+            blur_radius: 0.0,
+        },
+        ..ContainerStyle::default()
+    }
+}
+
+pub fn add_button_style(_: &Theme, status: ButtonStatus) -> ButtonStyle {
+    let active = ButtonStyle {
+        background: Option::from(Background::Color(Color::parse("#e3dca5").unwrap())),
+        text_color:  Color::parse("#704012").unwrap(),
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 5.0,
+            radius: Radius::from(8),
+        },
+        shadow: Shadow {
+            color: Color::TRANSPARENT,
+            offset: Vector::new(0.0, 0.0),
+            blur_radius: 0.0,
+        },
     };
 
     match status {
         ButtonStatus::Active |ButtonStatus::Pressed => active.clone(),
-        ButtonStatus::Hovered => match theme {
-            Theme::Dark => ButtonStyle {
-                background: Option::from(Background::Color(Color::parse("#9e9e9e").unwrap())),
-                text_color:  Color::parse("#ffffff").unwrap(),
-                ..active
-            },
-            _ => ButtonStyle {
-                background: Option::from(Background::Color(Color::parse("#ececec").unwrap())),
-                text_color:  Color::parse("#2E2E2E").unwrap(),
-                ..active
-            }
+        ButtonStatus::Hovered => ButtonStyle {
+            background: Option::from(Background::Color(Color::parse("#ececec").unwrap())),
+            text_color:  Color::parse("#2E2E2E").unwrap(),
+            ..active
         },
-        ButtonStatus::Disabled => match theme {
-            Theme::Dark => ButtonStyle {
-                background: Option::from(Background::Color(Color::parse("#2E2E2E").unwrap())),
-                text_color:  Color::parse("#9e9e9e").unwrap(),
-                ..active
+        ButtonStatus::Disabled => ButtonStyle {
+            background: Option::from(Background::Color(Color::parse("#ffffff").unwrap())),
+            text_color:  Color::parse("#9e9e9e").unwrap(),
+            ..active
+        },
+    }
+}
+
+pub fn scrollable_style(theme: &Theme, status: ScrollableStatus) -> ScrollableStyle {
+    match status {
+        ScrollableStatus::Active => ScrollableStyle {
+            vertical_rail: Rail {
+                background: None,
+                border: border::rounded(2),
+                scroller: Scroller {
+                    color: Color::TRANSPARENT,
+                    border: border::rounded(2),
+                },
             },
-            _ => ButtonStyle {
-                background: Option::from(Background::Color(Color::parse("#ffffff").unwrap())),
-                text_color:  Color::parse("#9e9e9e").unwrap(),
-                ..active
-            }
+            ..ScrollableStyleDefault(theme, status)
+        },
+        _ => ScrollableStyle {
+            vertical_rail: Rail {
+                background: Some(Color::parse("#a4876d").unwrap().into()),
+                border: border::rounded(2),
+                scroller: Scroller {
+                    color: Color::parse("#e7e0b0").unwrap(),
+                    border: border::rounded(2),
+                },
+            },
+            ..ScrollableStyleDefault(theme, status)
         },
     }
 }

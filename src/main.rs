@@ -1,13 +1,11 @@
 mod styles;
 mod components;
 
-use crate::styles::{button_style, scrollable_style};
-use iced::widget::{button, column, container, horizontal_space, image, row, scrollable, text, vertical_space};
-use iced::{window, Alignment, Element, Fill, Padding, Shrink, Size, Task, Theme};
-use iced::border::width;
-use iced::window::icon;
-use iced_aw::iced_fonts::required::icon_to_char;
 use crate::components::address_list::{AddressList, AddressListMessage};
+use crate::styles::{button_style, icon_button_style, right_side_style, scrollable_style, COLOR_THEME};
+use iced::widget::{button, column, container, horizontal_space, row, scrollable, svg, vertical_space};
+use iced::Length::Fixed;
+use iced::{color, window, Alignment, ContentFit, Element, Fill, Padding, Size, Task, Theme};
 
 #[derive(Default)]
 struct McScan {
@@ -36,7 +34,6 @@ impl McScan {
         )
     }
 
-
     fn update(&mut self, message: Message) {
         match message {
             Message::WindowInitialized(id) => {
@@ -61,6 +58,8 @@ impl McScan {
         }
     }
 
+
+
     fn view(&'_ self) -> Element<'_, Message> {
         // LEFT SIDE -------------------------------------------------------------------------------
         let servers_list =  container(
@@ -83,10 +82,25 @@ impl McScan {
         );
 
         let address_list = self.address_list.view().map(Message::AddressList);
+        let handle = svg::Handle::from_path(format!(
+            "{}/assets/settings.svg",
+            env!("CARGO_MANIFEST_DIR")
+        ));
 
-        let switch_theme_button = button("S")
-            .style(button_style)
-            .width(Shrink)
+
+
+        let open_settings_button = button(svg(handle)
+            .content_fit(ContentFit::Fill)
+            .width(Fill)
+            .height(Fill)
+            .style(|_theme, _status| svg::Style {
+                color: Some(color!(0xe3dca5))
+            })
+        )
+            .style(icon_button_style)
+            .padding(Padding::ZERO)
+            .width(Fixed(24.0))
+            .height(Fixed(24.0))
             .on_press(Message::SwitchTheme(match self.theme {
                 Theme::Dark => Theme::Light,
                 _ => Theme::Dark,
@@ -94,8 +108,9 @@ impl McScan {
 
         let right_side = container(
             column![
+                row![scan_button, horizontal_space(), open_settings_button]
+                    .align_y(Alignment::Center),
                 address_list,
-                row![scan_button, horizontal_space(), switch_theme_button]
             ]
                 .spacing(10)
                 .padding(Padding {
@@ -108,10 +123,16 @@ impl McScan {
                 .width(Fill)
                 .height(Fill)
         )
+            .style(right_side_style)
+            .padding(Padding {
+                top: 0.0,
+                right: 10.0,
+                bottom: 0.0,
+                left: 10.0,
+            })
             .center_x(Fill)
             .center_y(Fill);
 
-        // let current_theme = text(format!("Current theme: {}", self.theme));
         // MAIN ------------------------------------------------------------------------------------
         container(
             row![
@@ -120,21 +141,14 @@ impl McScan {
             ]
                 .width(Fill)
                 .height(Fill)
-                .spacing(10)
         )
-            .padding(Padding {
-                top: 0.0,
-                right: 10.0,
-                bottom: 0.0,
-                left: 10.0,
-            })
             .center_x(Fill)
             .center_y(Fill)
             .into()
     }
 
     fn theme(&self) -> Theme {
-        self.theme.clone()
+        COLOR_THEME.clone()
     }
 }
 
@@ -159,5 +173,4 @@ fn main() -> iced::Result {
             ..window::Settings::default()
         })
         .run_with(McScan::init)
-
 }
