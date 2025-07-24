@@ -10,8 +10,7 @@ use iced::{color, window, Alignment, ContentFit, Element, Fill, Padding, Size, T
 #[derive(Default)]
 struct McScan {
     pub wid: Option<window::Id>,
-    theme: Theme,
-    value: i64,
+    is_scanning: bool,
     address_list: AddressList
 }
 
@@ -19,10 +18,9 @@ struct McScan {
 #[derive(Debug, Clone)]
 pub enum Message {
     WindowInitialized(Option<window::Id>),
-    Scan(Option<u64>),
+    Scan,
     AddressList(AddressListMessage),
-    SwitchTheme(Theme),
-    Settings,
+    OpenSettings,
 }
 
 impl McScan {
@@ -40,19 +38,11 @@ impl McScan {
                 self.wid = id;
                 // todo setup window size
             }
-            Message::Scan(id) => {
-                self.value -= 1;
+            Message::Scan => {
+                self.is_scanning = true;
             },
-            Message::Settings => {
+            Message::OpenSettings => {
                 // todo open settings
-            },
-            Message::SwitchTheme(theme) => match theme {
-                Theme::Dark => {
-                    self.theme = Theme::Dark;
-                }
-                _ => {
-                    self.theme = Theme::Light;
-                }
             },
             Message::AddressList(msg) => self.address_list.update(msg)
         }
@@ -78,8 +68,7 @@ impl McScan {
         // RIGHT SIDE ------------------------------------------------------------------------------
         let scan_button = button("Scan")
             .style(button_style)
-            .on_press(Message::Scan(None)
-        );
+            .on_press(Message::Scan);
 
         let address_list = self.address_list.view().map(Message::AddressList);
         let handle = svg::Handle::from_path(format!(
@@ -100,11 +89,11 @@ impl McScan {
             .style(icon_button_style)
             .padding(Padding::ZERO)
             .width(Fixed(24.0))
-            .height(Fixed(24.0))
-            .on_press(Message::SwitchTheme(match self.theme {
-                Theme::Dark => Theme::Light,
-                _ => Theme::Dark,
-            }));
+            .height(Fixed(24.0));
+            // .on_press(Message::SwitchTheme(match self.theme {
+            //     Theme::Dark => Theme::Light,
+            //     _ => Theme::Dark,
+            // }));
 
         let right_side = container(
             column![
