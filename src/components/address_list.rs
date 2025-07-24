@@ -143,7 +143,7 @@ impl AddressList {
 
 pub fn style(_: &Theme) -> ContainerStyle {
     ContainerStyle {
-        background: Option::from(Background::Color(Color::parse("#d7baa0").unwrap())),
+        background: Option::from(Background::Color(Color::parse("#c1a790").unwrap())),
         border: Border {
             color: Color::parse("#a4876d").unwrap(),
             width: 5.0,
@@ -154,21 +154,21 @@ pub fn style(_: &Theme) -> ContainerStyle {
             offset: Vector::new(0.0, 0.0),
             blur_radius: 1.0,
         },
-        text_color: Option::from(Color::parse("#665e1d").unwrap()),
+        text_color: Option::from(Color::parse("#e8e3b7").unwrap()),
         ..ContainerStyle::default()
     }
 }
 
 pub fn input_style(_: &Theme, _: TextInputStatus) -> TextInputStyle {
     TextInputStyle {
-        background: Background::Color(Color::TRANSPARENT),
+        background: Background::Color(Color::parse("#c1a790").unwrap()),
         border: Border {
             radius: 5.0.into(),
-            width: 0.0,
+            width: 5.0,
             color: Color::TRANSPARENT,
         },
         icon: Color::TRANSPARENT,
-        placeholder: Color::parse("#c0b7af").unwrap(),
+        placeholder: Color::parse("#ccc5bf").unwrap(),
         value: Color::parse("#e3dca5").unwrap(),
         selection: Color::parse("#c0b7af").unwrap(),
     }
