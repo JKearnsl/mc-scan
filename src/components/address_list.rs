@@ -1,257 +1,139 @@
-use iced::widget::scrollable::{default as ScrollableStyleDefault, Rail, Scroller, Status as ScrollableStatus, Style as ScrollableStyle};
-use iced::border::Radius;
-use iced::widget::button::{Status as ButtonStatus, Style as ButtonStyle};
 use iced::widget::container::Style as ContainerStyle;
-use iced::widget::text_input::Style as TextInputStyle;
-use iced::widget::text_input::Status as TextInputStatus;
-use iced::widget::{button, column, container, horizontal_space, row, scrollable, svg, text, text_input};
-use iced::{border, color, Background, Border, Center, Color, ContentFit, Element, Fill, Padding, Shadow, Shrink, Theme, Vector};
-use ipnet::{IpNet, Ipv4Net, Ipv6Net};
-use std::net::IpAddr;
-use std::str::FromStr;
+use iced::widget::space::Space;
+use iced::widget::{button, column, container, mouse_area, row, scrollable, svg, text};
+use iced::{Alignment, Background, Border, Color, Element, Fill, Padding};
 use iced::Length::Fixed;
-use crate::styles::icon_button_style;
+use ipnet::IpNet;
+use crate::styles::{c, scrollable_style, trash_button_style, MONO};
 
 #[derive(Debug, Clone)]
 pub enum AddressListMessage {
-    AddClicked,
     RemoveClicked(usize),
-    InputChanged(String),
+    HoverEnter(usize),
+    HoverExit,
 }
 
-#[derive(Default)]
 pub struct AddressList {
-    input_address: String,
-    input_error: bool,
     values: Vec<IpNet>,
+    hover_index: Option<usize>,
+}
+
+impl Default for AddressList {
+    fn default() -> Self {
+        Self { values: Vec::new(), hover_index: None }
+    }
 }
 
 impl AddressList {
-    pub fn update(&mut self, message: AddressListMessage) {
-        match message {
-            AddressListMessage::AddClicked => match IpNet::from_str(&self.input_address) {
-                Ok(ip_net) => {
-                    self.values.push(ip_net);
-                    self.input_address.clear();
-                }
-                Err(_) => {
-                    if let Ok(ip_addr) = self.input_address.parse::<IpAddr>() {
-                        let ip_net = match ip_addr {
-                            IpAddr::V4(addr) => IpNet::V4(Ipv4Net::new(addr, 32).unwrap()),
-                            IpAddr::V6(addr) => IpNet::V6(Ipv6Net::new(addr, 128).unwrap()),
-                        };
-                        self.values.push(ip_net);
-                        self.input_address.clear();
-                    } else {
-                        self.input_error = true;
-                    }
-                }
-            },
-            AddressListMessage::InputChanged(text) => {
-                self.input_error = false;
-                self.input_address = text
-            },
-            AddressListMessage::RemoveClicked(index) => {
-                self.values.remove(index);
-            },
+    pub fn values(&self) -> &[IpNet] {
+        &self.values
+    }
+
+    pub fn push_ranges(&mut self, ranges: Vec<IpNet>) {
+        for r in ranges {
+            if !self.values.contains(&r) {
+                self.values.push(r);
+            }
         }
     }
 
-    pub fn view(&'_ self) -> Element<'_, AddressListMessage> {
-        let mut address_input = text_input("0.0.0.0/0", &self.input_address)
-            .on_input(AddressListMessage::InputChanged)
-            .padding(Padding {
-                top: 5.0,
-                right: 10.0,
-                bottom: 5.0,
-                left: 10.0,
-            })
-            .style(input_style)
-            .width(Fill);
-
-        if self.input_error {
-            address_input = address_input.style(input_style_err);
+    pub fn update(&mut self, message: AddressListMessage) {
+        match message {
+            AddressListMessage::RemoveClicked(i) => {
+                self.values.remove(i);
+                self.hover_index = None;
+            }
+            AddressListMessage::HoverEnter(i) => self.hover_index = Some(i),
+            AddressListMessage::HoverExit      => self.hover_index = None,
         }
+    }
 
-        let add_button = button("+")
-            .on_press(AddressListMessage::AddClicked)
-            .padding(Padding {
-                top: 5.0,
-                right: 10.0,
-                bottom: 5.0,
-                left: 10.0,
-            })
-            .style(add_button_style)
-            .width(Shrink);
+    pub fn total_hosts(&self) -> u64 {
+        self.values.iter().map(net_host_count).sum()
+    }
 
-        let mut addresses = iced::widget::column![]
-            .padding(Padding {
-                top: 5.0,
-                right: 0.0,
-                bottom: 5.0,
-                left: 10.0,
-            }).spacing(5);
-
-        let handle = svg::Handle::from_path(format!(
+    pub fn view(&self, dark: bool) -> Element<'_, AddressListMessage> {
+        let trash_handle = svg::Handle::from_path(format!(
             "{}/assets/trash.svg",
             env!("CARGO_MANIFEST_DIR")
         ));
 
-        for (i, ip_net) in self.values.iter().enumerate() {
-            addresses = addresses.push(
-                row![
-                    text(match ip_net {
-                        IpNet::V4(net) => format!("{}", net),
-                        IpNet::V6(net) => format!("{}", net),
-                    }),
-                    horizontal_space(),
-                    button(svg(handle.clone())
-                        .content_fit(ContentFit::Fill)
-                        .width(Fill)
-                        .height(Fill)
-                        .style(|_theme, _status| svg::Style {
-                            color: Some(color!(0x9f3838))
-                        })
-                    )
-                        .style(icon_button_style)
-                        .padding(Padding::ZERO)
-                        .width(Fixed(24.0))
-                        .height(Fixed(24.0))
-                        .on_press(AddressListMessage::RemoveClicked(i))
-                ]
-                    .spacing(10)
-                    .align_y(Center)
-            );
+        let mut list = column![].spacing(2);
+        for (i, net) in self.values.iter().enumerate() {
+            let hovered = self.hover_index == Some(i);
+            list = list.push(range_row(i, net, trash_handle.clone(), hovered, dark));
         }
 
-        container(column![
-            container(row![address_input, add_button]).style(input_container_style),
-            scrollable(addresses)
-                .style(scrollable_style)
-                .spacing(10)
-                .width(Fill)
-                .height(Fill)
-        ])
-            .style(style)
-            .center_x(Fill)
-            .center_y(Fill)
+        scrollable(list)
+            .style(scrollable_style)
+            .width(Fill)
+            .height(Fill)
             .into()
     }
 }
 
-
-
-pub fn style(_: &Theme) -> ContainerStyle {
-    ContainerStyle {
-        background: Option::from(Background::Color(Color::parse("#c1a790").unwrap())),
-        border: Border {
-            color: Color::parse("#a4876d").unwrap(),
-            width: 5.0,
-            radius: Radius::from(5),
-        },
-        shadow: Shadow {
-            color: Color::parse("#a4876d").unwrap(),
-            offset: Vector::new(0.0, 0.0),
-            blur_radius: 1.0,
-        },
-        text_color: Option::from(Color::parse("#e8e3b7").unwrap()),
-        ..ContainerStyle::default()
-    }
-}
-
-pub fn input_style(_: &Theme, _: TextInputStatus) -> TextInputStyle {
-    TextInputStyle {
-        background: Background::Color(Color::parse("#c1a790").unwrap()),
-        border: Border {
-            radius: 5.0.into(),
-            width: 5.0,
-            color: Color::TRANSPARENT,
-        },
-        icon: Color::TRANSPARENT,
-        placeholder: Color::parse("#ccc5bf").unwrap(),
-        value: Color::parse("#e3dca5").unwrap(),
-        selection: Color::parse("#c0b7af").unwrap(),
-    }
-}
-
-pub fn input_style_err(theme: &Theme, _: TextInputStatus) -> TextInputStyle {
-    TextInputStyle {
-        value: Color::parse("#990000").unwrap(),
-        ..input_style(theme, TextInputStatus::Active)
-    }
-}
-
-pub fn input_container_style(_: &Theme) -> ContainerStyle {
-    ContainerStyle {
-        background: Option::from(Background::Color(Color::parse("#a4876d").unwrap())),
-        border: Border {
-            color: Color::parse("#a4876d").unwrap(),
-            width: 5.0,
-            radius: Radius::from(5),
-        },
-        shadow: Shadow {
-            color: Color::TRANSPARENT,
-            offset: Vector::new(0.0, 0.0),
-            blur_radius: 0.0,
-        },
-        ..ContainerStyle::default()
-    }
-}
-
-pub fn add_button_style(_: &Theme, status: ButtonStatus) -> ButtonStyle {
-    let active = ButtonStyle {
-        background: Option::from(Background::Color(Color::parse("#e3dca5").unwrap())),
-        text_color:  Color::parse("#704012").unwrap(),
-        border: Border {
-            color: Color::TRANSPARENT,
-            width: 5.0,
-            radius: Radius::from(8),
-        },
-        shadow: Shadow {
-            color: Color::TRANSPARENT,
-            offset: Vector::new(0.0, 0.0),
-            blur_radius: 0.0,
-        },
+fn range_row(
+    index: usize,
+    net: &IpNet,
+    trash_handle: svg::Handle,
+    is_hovered: bool,
+    dark: bool,
+) -> Element<'_, AddressListMessage> {
+    let cidr_color  = if dark { c("#C4CAD4") } else { c("#3A4049") };
+    let count_color = if dark { c("#5C636F") } else { c("#A0A7B1") };
+    let svg_color   = if dark { c("#6B7480") } else { c("#8A929E") };
+    let hover_bg: Option<Color> = if is_hovered {
+        Some(if dark { c("#181D25") } else { c("#F2F4F7") })
+    } else {
+        None
     };
 
-    match status {
-        ButtonStatus::Active |ButtonStatus::Pressed => active.clone(),
-        ButtonStatus::Hovered => ButtonStyle {
-            background: Option::from(Background::Color(Color::parse("#ececec").unwrap())),
-            text_color:  Color::parse("#2E2E2E").unwrap(),
-            ..active
-        },
-        ButtonStatus::Disabled => ButtonStyle {
-            background: Option::from(Background::Color(Color::parse("#ffffff").unwrap())),
-            text_color:  Color::parse("#9e9e9e").unwrap(),
-            ..active
-        },
+    let row_content = row![
+        text(net.to_string())
+            .size(13)
+            .font(MONO)
+            .style(move |_| iced::widget::text::Style { color: Some(cidr_color) }),
+        Space::new().width(Fill),
+        text(format_host_count(net_host_count(net)))
+            .size(11)
+            .font(MONO)
+            .style(move |_| iced::widget::text::Style { color: Some(count_color) }),
+        Space::new().width(10),
+        button(
+            svg(trash_handle)
+                .content_fit(iced::ContentFit::Fill)
+                .width(Fixed(14.0))
+                .height(Fixed(14.0))
+                .style(move |_theme, _status| iced::widget::svg::Style { color: Some(svg_color) }),
+        )
+        .style(trash_button_style)
+        .padding(Padding::from([4, 4]))
+        .on_press(AddressListMessage::RemoveClicked(index)),
+    ]
+    .align_y(Alignment::Center);
+
+    let content = container(row_content)
+        .style(move |_: &_| ContainerStyle {
+            background: hover_bg.map(Background::Color),
+            border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 7.0.into() },
+            ..Default::default()
+        })
+        .padding(Padding { top: 8.0, right: 0.0, bottom: 8.0, left: 10.0 })
+        .width(Fill);
+
+    mouse_area(content)
+        .on_enter(AddressListMessage::HoverEnter(index))
+        .on_exit(AddressListMessage::HoverExit)
+        .into()
+}
+
+fn net_host_count(net: &IpNet) -> u64 {
+    match net {
+        IpNet::V4(n) => { let bits = 32u64.saturating_sub(n.prefix_len() as u64); 1u64 << bits }
+        IpNet::V6(n) => { let bits = 128u64.saturating_sub(n.prefix_len() as u64); if bits >= 64 { u64::MAX } else { 1u64 << bits } }
     }
 }
 
-pub fn scrollable_style(theme: &Theme, status: ScrollableStatus) -> ScrollableStyle {
-    match status {
-        ScrollableStatus::Active => ScrollableStyle {
-            vertical_rail: Rail {
-                background: None,
-                border: border::rounded(2),
-                scroller: Scroller {
-                    color: Color::TRANSPARENT,
-                    border: border::rounded(2),
-                },
-            },
-            ..ScrollableStyleDefault(theme, status)
-        },
-        _ => ScrollableStyle {
-            vertical_rail: Rail {
-                background: Some(Color::parse("#a4876d").unwrap().into()),
-                border: border::rounded(2),
-                scroller: Scroller {
-                    color: Color::parse("#e7e0b0").unwrap(),
-                    border: border::rounded(2),
-                },
-            },
-            ..ScrollableStyleDefault(theme, status)
-        },
-    }
+fn format_host_count(n: u64) -> String {
+    if n == u64::MAX { "∞".to_string() } else { n.to_string() }
 }
