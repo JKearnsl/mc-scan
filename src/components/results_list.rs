@@ -1,10 +1,10 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
 use iced::widget::{column, container, row, scrollable, text, Stack};
-use iced::{gradient, Alignment, Background, Border, Color, Element, Fill, Padding};
+use iced::{gradient, Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 use iced::Length::Fixed;
 use crate::scanner::types::{Edition, ServerInfo};
-use crate::styles::{c, ping_color, scrollable_style, surface_card_style, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
+use crate::styles::{c, is_dark, scrollable_style, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
 
 #[derive(Default)]
 pub struct ResultsList {
@@ -19,14 +19,15 @@ impl ResultsList {
     pub fn clear(&mut self) { self.items.clear(); }
     pub fn count(&self) -> usize { self.items.len() }
 
-    pub fn view(&self, dark: bool) -> Element<'_, ResultsListMessage> {
-        let label_c = if dark { c("#5C636F") } else { c("#A0A7B1") };
+    pub fn view(&self) -> Element<'_, ResultsListMessage> {
         if self.items.is_empty() {
             return container(
                 text("Результаты появятся здесь после сканирования")
                     .size(14)
                     .font(SANS)
-                    .style(move |_| iced::widget::text::Style { color: Some(label_c) }),
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                    }),
             )
             .center_x(Fill)
             .center_y(Fill)
@@ -35,7 +36,7 @@ impl ResultsList {
 
         let mut col = column![].spacing(10).padding(Padding::from([12, 16]));
         for info in &self.items {
-            col = col.push(server_row(info, dark));
+            col = col.push(server_row(info));
         }
 
         scrollable(col)
@@ -46,20 +47,18 @@ impl ResultsList {
     }
 }
 
-fn server_row(info: &ServerInfo, dark: bool) -> Element<'_, ResultsListMessage> {
+fn server_row(info: &ServerInfo) -> Element<'_, ResultsListMessage> {
     let (name, description) = split_motd(&info.motd);
     let avatar = build_avatar(&name, &info.edition);
     let ip_port = format!("{}:{}", info.addr.ip(), info.addr.port());
-
-    let text1 = if dark { c("#E8EBF0") } else { c("#161A20") };
-    let text2 = if dark { c("#A2ABBA") } else { c("#3A4049") };
-    let text3 = if dark { c("#6B7480") } else { c("#8A929E") };
 
     let mut left_col = column![
         text(name)
             .size(16)
             .font(SANS_SEMIBOLD)
-            .style(move |_| iced::widget::text::Style { color: Some(text1) })
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
+            })
             .wrapping(text::Wrapping::None),
     ];
 
@@ -68,7 +67,9 @@ fn server_row(info: &ServerInfo, dark: bool) -> Element<'_, ResultsListMessage> 
             text(description)
                 .size(13)
                 .font(SANS)
-                .style(move |_| iced::widget::text::Style { color: Some(text2) })
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
+                })
                 .wrapping(text::Wrapping::None),
         );
     }
@@ -77,7 +78,9 @@ fn server_row(info: &ServerInfo, dark: bool) -> Element<'_, ResultsListMessage> 
         text(ip_port)
             .size(13)
             .font(MONO)
-            .style(move |_| iced::widget::text::Style { color: Some(text3) }),
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+            }),
     );
 
     let left_block = left_col.spacing(3).width(Fill).clip(true);
@@ -85,10 +88,11 @@ fn server_row(info: &ServerInfo, dark: bool) -> Element<'_, ResultsListMessage> 
     let ping_col = ping_color(info.latency_ms);
     let ping_str = format!("{} ms", info.latency_ms);
     let (software, ver_str) = parse_version(&info.version);
+
     let right_block = row![
-        players_column(info.online as u64, info.max_players as u64, dark),
-        stat_column("ПИНГ", ping_str, ping_col, Fixed(68.0), dark),
-        version_column(ver_str, software, dark),
+        players_column(info.online as u64, info.max_players as u64),
+        stat_column("ПИНГ", ping_str, ping_col, Fixed(68.0)),
+        version_column(ver_str, software),
     ]
     .spacing(4)
     .align_y(Alignment::Start);
@@ -97,29 +101,33 @@ fn server_row(info: &ServerInfo, dark: bool) -> Element<'_, ResultsListMessage> 
         row![avatar, Space::new().width(15), left_block, right_block]
             .align_y(Alignment::Center),
     )
-    .style(surface_card_style)
+    .style(card_style)
     .padding(Padding::from([13, 15]))
     .width(Fill)
     .into()
 }
 
-fn players_column(online: u64, max: u64, dark: bool) -> Element<'static, ResultsListMessage> {
-    let label_c = if dark { c("#5C636F") } else { c("#A0A7B1") };
-    let dot_c   = if dark { c("#3DD68C") } else { c("#18A862") };
-    let count_c = if dark { c("#E8EBF0") } else { c("#161A20") };
-
+fn players_column(online: u64, max: u64) -> Element<'static, ResultsListMessage> {
     column![
         text("ИГРОКИ")
             .size(10)
             .font(SANS_SEMIBOLD)
-            .style(move |_| iced::widget::text::Style { color: Some(label_c) }),
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+            }),
         row![
-            text("●").size(8).font(MONO)
-                .style(move |_| iced::widget::text::Style { color: Some(dot_c) }),
+            text("●")
+                .size(8)
+                .font(MONO)
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(if is_dark(t) { c("#3DD68C") } else { c("#18A862") }),
+                }),
             text(format!("{} / {}", online, max))
                 .size(14)
                 .font(MONO_SEMIBOLD)
-                .style(move |_| iced::widget::text::Style { color: Some(count_c) }),
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
+                }),
         ]
         .align_y(Alignment::Center)
         .spacing(6),
@@ -135,18 +143,18 @@ fn stat_column(
     value: String,
     value_color: Color,
     width: iced::Length,
-    dark: bool,
 ) -> Element<'static, ResultsListMessage> {
-    let label_c = if dark { c("#5C636F") } else { c("#A0A7B1") };
     column![
         text(label)
             .size(10)
             .font(SANS_SEMIBOLD)
-            .style(move |_| iced::widget::text::Style { color: Some(label_c) }),
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+            }),
         text(value)
             .size(14)
             .font(MONO_SEMIBOLD)
-            .style(move |_| iced::widget::text::Style { color: Some(value_color) }),
+            .style(move |_: &Theme| iced::widget::text::Style { color: Some(value_color) }),
     ]
     .spacing(3)
     .align_x(iced::alignment::Horizontal::Right)
@@ -154,22 +162,20 @@ fn stat_column(
     .into()
 }
 
-fn version_column(version: String, software: Option<String>, dark: bool) -> Element<'static, ResultsListMessage> {
-    let label_c   = if dark { c("#5C636F") } else { c("#A0A7B1") };
-    let ver_c     = if dark { c("#A2ABBA") } else { c("#3A4049") };
-    let badge_bg  = if dark { c("#1F2630") } else { c("#EEF0F3") };
-    let badge_brd = if dark { c("#2A3240") } else { c("#DDE2E8") };
-    let badge_txt = if dark { c("#A2ABBA") } else { c("#3A4049") };
-
+fn version_column(version: String, software: Option<String>) -> Element<'static, ResultsListMessage> {
     let mut col = column![
         text("ВЕРСИЯ")
             .size(10)
             .font(SANS_SEMIBOLD)
-            .style(move |_| iced::widget::text::Style { color: Some(label_c) }),
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+            }),
         text(version)
             .size(13)
             .font(MONO)
-            .style(move |_| iced::widget::text::Style { color: Some(ver_c) }),
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
+            }),
     ]
     .spacing(3)
     .align_x(iced::alignment::Horizontal::Right);
@@ -179,11 +185,17 @@ fn version_column(version: String, software: Option<String>, dark: bool) -> Elem
             text(sw)
                 .size(11)
                 .font(MONO)
-                .style(move |_| iced::widget::text::Style { color: Some(badge_txt) }),
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
+                }),
         )
-        .style(move |_: &_| ContainerStyle {
-            background: Some(Background::Color(badge_bg)),
-            border: Border { color: badge_brd, width: 1.0, radius: 4.0.into() },
+        .style(|t: &Theme| ContainerStyle {
+            background: Some(Background::Color(if is_dark(t) { c("#1F2630") } else { c("#EEF0F3") })),
+            border: Border {
+                color: if is_dark(t) { c("#2A3240") } else { c("#DDE2E8") },
+                width: 1.0,
+                radius: 4.0.into(),
+            },
             ..Default::default()
         })
         .padding(Padding::from([2, 6]));
@@ -250,16 +262,20 @@ fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsListMes
         text(first.to_string())
             .size(22)
             .font(SANS_SEMIBOLD)
-            .style(move |_| iced::widget::text::Style { color: Some(letter_color) }),
+            .style(move |_: &Theme| iced::widget::text::Style { color: Some(letter_color) }),
     )
-    .style(move |_: &_| ContainerStyle {
+    .style(move |t: &Theme| ContainerStyle {
         background: Some(Background::Gradient(
             gradient::Linear::new(angle)
                 .add_stop(0.0, grad_start)
                 .add_stop(1.0, grad_end)
                 .into(),
         )),
-        border: Border { color: Color { r: 0.137, g: 0.165, b: 0.204, a: 1.0 }, width: 1.0, radius: 8.0.into() },
+        border: Border {
+            color: if is_dark(t) { c("#232A34") } else { c("#E1E5EA") },
+            width: 1.0,
+            radius: 8.0.into(),
+        },
         ..Default::default()
     })
     .center(Fixed(52.0));
@@ -268,18 +284,21 @@ fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsListMes
         Edition::Java    => (c("#D99A3C"), c("#08110B"), "J"),
         Edition::Bedrock => (c("#13A884"), c("#04120E"), "B"),
     };
-    let border_col = c("#181D25");
 
     let badge_inner = container(
         container(
             text(badge_letter)
                 .size(9)
                 .font(MONO_SEMIBOLD)
-                .style(move |_| iced::widget::text::Style { color: Some(badge_text_col) }),
+                .style(move |_: &Theme| iced::widget::text::Style { color: Some(badge_text_col) }),
         )
-        .style(move |_: &_| ContainerStyle {
+        .style(move |t: &Theme| ContainerStyle {
             background: Some(Background::Color(badge_bg)),
-            border: Border { color: border_col, width: 2.0, radius: 5.0.into() },
+            border: Border {
+                color: if is_dark(t) { c("#181D25") } else { c("#E1E5EA") },
+                width: 2.0,
+                radius: 5.0.into(),
+            },
             ..Default::default()
         })
         .center(Fixed(18.0)),
@@ -310,4 +329,17 @@ fn split_motd(motd: &str) -> (String, String) {
     } else {
         (stripped.to_string(), String::new())
     }
+}
+
+fn card_style(t: &Theme) -> ContainerStyle {
+    let dark = is_dark(t);
+    ContainerStyle {
+        background: Some(Background::Color(if dark { c("#181D25") } else { c("#FFFFFF") })),
+        border: Border { color: if dark { c("#232A34") } else { c("#E5E9EF") }, width: 1.0, radius: 10.0.into() },
+        ..Default::default()
+    }
+}
+
+fn ping_color(ms: u64) -> Color {
+    if ms < 80 { c("#3DD68C") } else if ms <= 200 { c("#E0B23C") } else { c("#E5604D") }
 }
