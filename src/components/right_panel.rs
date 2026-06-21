@@ -25,7 +25,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             container("+").center(Fill)
         )
             .on_press(Message::OpenModal(ModalKind::AddRanges))
-            .padding(Padding::from([3, 8]))
+            .padding(Padding::ZERO)
             .style(add_btn_style)
             .width(Fixed(26.0))
             .height(Fixed(26.0))

@@ -6,11 +6,11 @@ mod styles;
 use app::McScan;
 use iced::{Font, Size, window};
 
-const PLEX_SANS: &[u8]          = include_bytes!("../fonts/IBMPlexSans-Regular.ttf");
-const PLEX_SANS_MEDIUM: &[u8]   = include_bytes!("../fonts/IBMPlexSans-Medium.ttf");
-const PLEX_SANS_SEMIBOLD: &[u8] = include_bytes!("../fonts/IBMPlexSans-SemiBold.ttf");
-const PLEX_MONO: &[u8]          = include_bytes!("../fonts/IBMPlexMono-Medium.ttf");
-const PLEX_MONO_SEMIBOLD: &[u8] = include_bytes!("../fonts/IBMPlexMono-SemiBold.ttf");
+const PLEX_SANS: &[u8]          = include_bytes!("../assets/fonts/IBMPlexSans-Regular.ttf");
+const PLEX_SANS_MEDIUM: &[u8]   = include_bytes!("../assets/fonts/IBMPlexSans-Medium.ttf");
+const PLEX_SANS_SEMIBOLD: &[u8] = include_bytes!("../assets/fonts/IBMPlexSans-SemiBold.ttf");
+const PLEX_MONO: &[u8]          = include_bytes!("../assets/fonts/IBMPlexMono-Medium.ttf");
+const PLEX_MONO_SEMIBOLD: &[u8] = include_bytes!("../assets/fonts/IBMPlexMono-SemiBold.ttf");
 
 fn main() -> iced::Result {
     iced::application(McScan::init, McScan::update, McScan::view)

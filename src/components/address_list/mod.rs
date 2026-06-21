@@ -1,3 +1,5 @@
+pub mod add_dialog;
+
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
 use iced::widget::{button, column, container, mouse_area, row, scrollable, svg, text};
@@ -11,16 +13,18 @@ pub enum AddressListMessage {
     RemoveClicked(usize),
     HoverEnter(usize),
     HoverExit,
+    ScrollChanged(bool),
 }
 
 pub struct AddressList {
     values: Vec<IpNet>,
     hover_index: Option<usize>,
+    is_scrollable: bool,
 }
 
 impl Default for AddressList {
     fn default() -> Self {
-        Self { values: Vec::new(), hover_index: None }
+        Self { values: Vec::new(), hover_index: None, is_scrollable: false }
     }
 }
 
@@ -45,6 +49,9 @@ impl AddressList {
             }
             AddressListMessage::HoverEnter(i) => self.hover_index = Some(i),
             AddressListMessage::HoverExit => self.hover_index = None,
+            AddressListMessage::ScrollChanged(scrollable) => {
+                self.is_scrollable = scrollable;
+            }
         }
     }
 
@@ -58,13 +65,22 @@ impl AddressList {
             env!("CARGO_MANIFEST_DIR")
         ));
 
+        // Fallback threshold: if too many items to fit in a typical panel height,
+        // assume scrollbar is visible before the user has scrolled
+        let is_scrollable = self.is_scrollable || self.values.len() > 15;
+
         let mut list = column![].spacing(2);
         for (i, net) in self.values.iter().enumerate() {
             let hovered = self.hover_index == Some(i);
-            list = list.push(range_row(i, net, trash_handle.clone(), hovered));
+            list = list.push(range_row(i, net, trash_handle.clone(), hovered, is_scrollable));
         }
 
         scrollable(list)
+            .on_scroll(|vp| {
+                AddressListMessage::ScrollChanged(
+                    vp.content_bounds().height > vp.bounds().height,
+                )
+            })
             .style(scrollable_style)
             .width(Fill)
             .height(Fill)
@@ -77,6 +93,7 @@ fn range_row(
     net: &IpNet,
     trash_handle: svg::Handle,
     is_hovered: bool,
+    is_scrollable: bool,
 ) -> Element<'_, AddressListMessage> {
     let row_content = row![
         text(net.to_string())
@@ -108,6 +125,8 @@ fn range_row(
     ]
     .align_y(Alignment::Center);
 
+    let right_pad = if is_scrollable { 14.0 } else { 4.0 };
+
     let content = container(row_content)
         .style(move |t: &Theme| ContainerStyle {
             background: if is_hovered {
@@ -118,7 +137,7 @@ fn range_row(
             border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 7.0.into() },
             ..Default::default()
         })
-        .padding(Padding { top: 8.0, right: 0.0, bottom: 8.0, left: 10.0 })
+        .padding(Padding { top: 8.0, right: right_pad, bottom: 8.0, left: 10.0 })
         .width(Fill);
 
     mouse_area(content)
