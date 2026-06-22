@@ -23,6 +23,7 @@ pub enum Message {
     ScanStart,
     ScanStop,
     ServerFound(ServerInfo),
+    ScanProgress(usize),
     ScanComplete,
     AddressList(AddressListMessage),
     ResultsList(ResultsListMessage),
@@ -127,8 +128,13 @@ impl McScan {
             Message::ScanStop => self.is_scanning = false,
 
             Message::ServerFound(info) => {
-                self.scanned_count += 1;
                 self.results.push(info);
+            }
+
+            Message::ScanProgress(n) => {
+                if self.is_scanning {
+                    self.scanned_count = n;
+                }
             }
 
             Message::ScanComplete => {
@@ -238,16 +244,25 @@ fn build_scan_stream(data: &(u64, Arc<ScanConfig>)) -> BoxStream<'static, Messag
     let (tx, rx) = mpsc::unbounded();
 
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
+        let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .expect("tokio runtime");
 
         rt.block_on(async move {
             let mut stream = Box::pin(crate::scanner::scan(config));
-            while let Some(info) = stream.next().await {
-                if tx.unbounded_send(Message::ServerFound(info)).is_err() {
-                    return;
+            let mut scanned = 0usize;
+            while let Some(maybe_info) = stream.next().await {
+                scanned += 1;
+                if let Some(info) = maybe_info {
+                    if tx.unbounded_send(Message::ServerFound(info)).is_err() {
+                        return;
+                    }
+                }
+                if scanned % 512 == 0 {
+                    if tx.unbounded_send(Message::ScanProgress(scanned)).is_err() {
+                        return;
+                    }
                 }
             }
             let _ = tx.unbounded_send(Message::ScanComplete);

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use futures::{stream, Stream, StreamExt};
 use types::{Edition, ScanConfig, ServerInfo};
 
-pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = ServerInfo> + Send + 'static {
+pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = Option<ServerInfo>> + Send + 'static {
     let timeout_ms = config.timeout_ms;
     let concurrency = config.concurrency;
     let java_ports = config.java_ports.clone();
@@ -34,7 +34,6 @@ pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = ServerInfo> + Send + 
             }
         })
         .buffer_unordered(concurrency)
-        .filter_map(|x| async move { x })
 }
 
 pub(super) fn strip_section_codes(s: &str) -> String {

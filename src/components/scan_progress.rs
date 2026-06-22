@@ -9,9 +9,12 @@ use crate::styles::{c, is_dark, MONO};
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let ratio = app.scanned_count as f32 / app.total_targets as f32;
     let pct = (ratio * 100.0) as u32;
-    let range_str = app.address_list.values().first()
-        .map(|r| r.to_string())
-        .unwrap_or_else(|| "…".to_string());
+    let ranges = app.address_list.values();
+    let range_str = match ranges.len() {
+        0 => "…".to_string(),
+        1 => ranges[0].to_string(),
+        n => format!("{} (+{})", ranges[0], n - 1),
+    };
     let scanned = app.scanned_count;
     let total = app.total_targets;
 

@@ -29,7 +29,7 @@ impl ResultsList {
                 text("Результаты появятся здесь после сканирования")
                     .size(14)
                     .font(SANS)
-                    .style(|t: &Theme| iced::widget::text::Style {
+                    .style(|t: &Theme| text::Style {
                         color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
                     }),
             )
