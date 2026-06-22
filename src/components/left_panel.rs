@@ -34,7 +34,7 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
     let found = app.results.count();
 
     let title = row![
-        text("mc-scan").size(18).font(MONO_SEMIBOLD)
+        text(env!("CARGO_PKG_NAME")).size(18).font(MONO_SEMIBOLD)
             .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
             }),

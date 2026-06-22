@@ -40,7 +40,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         Space::new().height(6),
         labeled_input("Таймаут мс", &app.settings.timeout_ms,     "1500",  Message::TimeoutChanged,      false),
         Space::new().height(20),
-        btn("Готово", Message::CloseModal, BtnVariant::Primary),
+        btn(BtnVariant::Primary("Готово"), Message::CloseModal),
     ];
 
     dialog("Настройки", Message::CloseModal, 380.0, body.into())

@@ -14,7 +14,7 @@ const PLEX_MONO_SEMIBOLD: &[u8] = include_bytes!("../assets/fonts/IBMPlexMono-Se
 
 fn main() -> iced::Result {
     iced::application(McScan::init, McScan::update, McScan::view)
-        .title("mc-scan")
+        .title(env!("CARGO_PKG_NAME"))
         .theme(McScan::theme)
         .subscription(McScan::subscription)
         .font(PLEX_SANS)

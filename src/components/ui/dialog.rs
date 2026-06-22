@@ -1,10 +1,11 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{button, column, container, row, text};
+use iced::widget::{column, container, row, svg, text};
 use iced::Length::Fixed;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
-use crate::styles::{c, icon_button_style, is_dark, SANS_SEMIBOLD};
+use crate::components::ui::{btn, BtnVariant};
+use crate::styles::{c, is_dark, SANS_SEMIBOLD};
 
 
 pub fn dialog<'a, M: Clone + 'a>(
@@ -13,16 +14,15 @@ pub fn dialog<'a, M: Clone + 'a>(
     width: f32,
     body: Element<'a, M>,
 ) -> Element<'a, M> {
+    let close_icon = svg::Handle::from_path(format!("{}/assets/close.svg", env!("CARGO_MANIFEST_DIR")));
+
     let inner = column![
         row![
             text(title).size(16).font(SANS_SEMIBOLD).style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
             }),
             Space::new().width(Fill),
-            button("×")
-                .on_press(on_close)
-                .style(icon_button_style)
-                .padding(Padding::from([4, 10])),
+            btn(BtnVariant::Icon { handle: close_icon, size: 14.0 }, on_close),
         ]
         .align_y(Alignment::Center),
         body

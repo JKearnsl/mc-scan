@@ -19,9 +19,9 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         textarea(&app.ranges_editor, Message::RangesEditorAction, 160.0),
         Space::new().height(16),
         row![
-            btn("Отмена", Message::CloseModal, BtnVariant::Danger),
+            btn(BtnVariant::Danger("Отмена"), Message::CloseModal),
             Space::new().width(10),
-            btn("Добавить", Message::ConfirmAddRanges, BtnVariant::Primary),
+            btn(BtnVariant::Primary("Добавить"), Message::ConfirmAddRanges),
         ],
     ];
 
