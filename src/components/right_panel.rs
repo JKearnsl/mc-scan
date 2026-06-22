@@ -5,11 +5,11 @@ use iced::Length::Fixed;
 use iced::{Alignment, Background, ContentFit, Element, Fill, Padding, Theme};
 
 use crate::app::{McScan, Message, ModalKind};
-use crate::components::ui::divider;
-use crate::styles::{button_danger, button_primary, c, icon_button_style, is_dark, MONO, SANS, SANS_SEMIBOLD};
+use crate::components::{action_button, ui::divider};
+use crate::styles::{c, icon_button_style, is_dark, MONO, SANS, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
-    let top_row = row![action_button(app), Space::new().width(8), settings_button()]
+    let top_row = row![action_button::render(app), Space::new().width(8), settings_button()]
         .align_y(Alignment::Center);
 
     let range_count = app.address_list.values().len();
@@ -88,43 +88,6 @@ fn settings_button() -> Element<'static, Message> {
     .height(Fixed(48.0))
     .on_press(Message::OpenModal(ModalKind::Settings))
     .into()
-}
-
-fn action_button(app: &McScan) -> Element<'_, Message> {
-    if app.is_scanning {
-        return button(
-            container(
-                text("■  Стоп").size(16).font(SANS_SEMIBOLD)
-                    .style(|_: &Theme| iced::widget::text::Style { color: Some(c("#FFFFFF")) }),
-            )
-            .center(Fill),
-        )
-        .style(button_danger)
-        .on_press(Message::ScanStop)
-        .width(Fill)
-        .height(Fixed(48.0))
-        .into();
-    }
-
-    let can_scan = !app.address_list.values().is_empty();
-    let btn = button(
-        container(
-            text("▶  Сканировать").size(16).font(SANS_SEMIBOLD)
-                .style(move |t: &Theme| iced::widget::text::Style {
-                    color: Some(if can_scan {
-                        if is_dark(t) { c("#08110B") } else { c("#FFFFFF") }
-                    } else {
-                        if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }
-                    }),
-                }),
-        )
-        .center(Fill),
-    )
-    .style(button_primary)
-    .width(Fill)
-    .height(Fixed(48.0));
-
-    if can_scan { btn.on_press(Message::ScanStart).into() } else { btn.into() }
 }
 
 fn panel_style(t: &Theme) -> ContainerStyle {
