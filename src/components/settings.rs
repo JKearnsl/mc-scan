@@ -1,11 +1,9 @@
 use iced::widget::space::Space;
-use iced::widget::{button, column, container, row, text};
-use iced::Length::Fixed;
-use iced::{Element, Fill};
+use iced::widget::{column, row};
+use iced::{Element};
 
 use crate::app::{McScan, Message};
 use crate::components::ui::{btn, dialog, labeled_input, section_label, BtnVariant};
-use crate::styles::{button_primary, button_secondary, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let is_dark_theme = app.is_dark;
@@ -15,17 +13,15 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         section_label("ТЕМА"),
         Space::new().height(8),
         row![
-            button(container(text("Тёмная").size(13).font(SANS_SEMIBOLD)).center(Fill))
-                .style(if is_dark_theme { button_primary } else { button_secondary })
-                .on_press(Message::SetTheme(true))
-                .width(Fill)
-                .height(Fixed(36.0)),
+            btn(
+                if is_dark_theme { BtnVariant::Primary("Тёмная") } else { BtnVariant::Secondary("Тёмная") },
+                Message::SetTheme(true),
+            ),
             Space::new().width(8),
-            button(container(text("Светлая").size(13).font(SANS_SEMIBOLD)).center(Fill))
-                .style(if !is_dark_theme { button_primary } else { button_secondary })
-                .on_press(Message::SetTheme(false))
-                .width(Fill)
-                .height(Fixed(36.0)),
+            btn(
+                if !is_dark_theme { BtnVariant::Primary("Светлая") } else { BtnVariant::Secondary("Светлая") },
+                Message::SetTheme(false),
+            ),
         ],
         Space::new().height(16),
         section_label("ПОРТЫ"),

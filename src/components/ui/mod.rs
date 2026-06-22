@@ -2,12 +2,14 @@ mod badge;
 mod button;
 mod dialog;
 mod input;
+mod scrollbar;
 mod textarea;
 
-pub use badge::{chip, status_badge};
+pub use badge::{chip, status};
 pub use button::{btn, BtnVariant};
 pub use dialog::dialog;
 pub use input::labeled_input;
+pub use scrollbar::scrollbar;
 pub use textarea::textarea;
 
 use iced::widget::container::Style as ContainerStyle;

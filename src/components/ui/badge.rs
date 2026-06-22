@@ -4,7 +4,7 @@ use iced::{Alignment, Background, Border, Color, Element, Padding, Theme};
 
 use crate::styles::{c, is_dark, MONO};
 
-pub fn status_badge<'a, M: Clone + 'a>(label: String) -> Element<'a, M> {
+pub fn status<'a, M: Clone + 'a>(label: String) -> Element<'a, M> {
     let inner = row![
         text("●").size(9).font(MONO).style(|t: &Theme| text::Style {
             color: Some(if is_dark(t) { c("#3DD68C") } else { c("#18A862") }),

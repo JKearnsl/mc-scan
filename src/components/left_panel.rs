@@ -4,7 +4,7 @@ use iced::Length::Fixed;
 use iced::{Alignment, Element, Fill, Padding, Theme};
 
 use crate::app::{McScan, Message};
-use crate::components::{scan_progress, ui::{divider, status_badge}};
+use crate::components::{scan_progress, ui::{divider, status}};
 use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -51,13 +51,13 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
     let mut r = row![title, Space::new().width(Fill)].align_y(Alignment::Center);
 
     if found > 0 {
-        r = r.push(status_badge(format!("{} найдено", found)));
+        r = r.push(status(format!("{} найдено", found)));
     }
 
     r.into()
 }
 
-fn header_style_fn(t: &Theme) -> iced::widget::container::Style {
+fn header_style_fn(t: &Theme) -> container::Style {
     container::Style {
         background: Some(iced::Background::Color(if is_dark(t) { c("#0E1116") } else { c("#FFFFFF") })),
         ..Default::default()

@@ -2,11 +2,7 @@ use iced::border::Radius;
 use iced::font::{Family, Stretch, Style as FontStyle, Weight};
 use iced::theme::Palette;
 use iced::widget::button::{Status as ButtonStatus, Style as ButtonStyle};
-use iced::widget::scrollable::{
-    default as scrollable_default, Rail, Scroller, Status as ScrollableStatus,
-    Style as ScrollableStyle,
-};
-use iced::{border, Background, Border, Color, Font, Shadow, Theme};
+use iced::{Background, Border, Color, Font, Shadow, Theme};
 use once_cell::sync::Lazy;
 
 pub fn c(hex: &str) -> Color {
@@ -120,68 +116,4 @@ pub fn button_danger(t: &Theme, status: ButtonStatus) -> ButtonStyle {
     }
 }
 
-pub fn button_secondary(t: &Theme, status: ButtonStatus) -> ButtonStyle {
-    let dark = is_dark(t);
-    let bg       = if dark { c("#181D25") } else { c("#FFFFFF") };
-    let bg_hov   = if dark { c("#1F2630") } else { c("#F2F4F7") };
-    let bg_prs   = if dark { c("#232A34") } else { c("#E8ECF0") };
-    let text     = if dark { c("#A2ABBA") } else { c("#3A4049") };
-    let text_hov = if dark { c("#E8EBF0") } else { c("#161A20") };
-    let border_c = if dark { c("#232A34") } else { c("#DDE2E8") };
-
-    let base = ButtonStyle {
-        background: Some(Background::Color(bg)),
-        text_color: text,
-        border: Border { color: border_c, width: 1.0, radius: Radius::from(10) },
-        shadow: Shadow::default(),
-        snap: false,
-    };
-    match status {
-        ButtonStatus::Hovered => ButtonStyle { background: Some(Background::Color(bg_hov)), text_color: text_hov, ..base },
-        ButtonStatus::Pressed => ButtonStyle { background: Some(Background::Color(bg_prs)), ..base },
-        _ => base,
-    }
-}
-
-pub fn icon_button_style(t: &Theme, status: ButtonStatus) -> ButtonStyle {
-    let dark = is_dark(t);
-    let bg       = if dark { c("#181D25") } else { c("#F6F7F9") };
-    let bg_hov   = if dark { c("#1F2630") } else { c("#EEF0F3") };
-    let bg_prs   = if dark { c("#232A34") } else { c("#E5E8EC") };
-    let text     = if dark { c("#6B7480") } else { c("#5B6470") };
-    let text_hov = if dark { c("#E8EBF0") } else { c("#161A20") };
-    let border_c = if dark { c("#232A34") } else { c("#E1E5EA") };
-
-    let base = ButtonStyle {
-        background: Some(Background::Color(bg)),
-        text_color: text,
-        border: Border { color: border_c, width: 1.0, radius: Radius::from(10) },
-        shadow: Shadow::default(),
-        snap: false,
-    };
-    match status {
-        ButtonStatus::Hovered => ButtonStyle { background: Some(Background::Color(bg_hov)), text_color: text_hov, ..base },
-        ButtonStatus::Pressed => ButtonStyle { background: Some(Background::Color(bg_prs)), ..base },
-        _ => base,
-    }
-}
-
-// Scrollable
-
-pub fn scrollable_style(theme: &Theme, status: ScrollableStatus) -> ScrollableStyle {
-    let dark = is_dark(theme);
-    let scroller = Scroller {
-        background: Background::Color(if dark { c("#232A34") } else { c("#C8CDD5") }),
-        border: border::rounded(2),
-    };
-    let rail = Rail {
-        background: Some(Background::Color(if dark { c("#1A1F27") } else { c("#E1E5EA") })),
-        border: border::rounded(2),
-        scroller,
-    };
-    ScrollableStyle {
-        vertical_rail: rail,
-        ..scrollable_default(theme, status)
-    }
-}
 

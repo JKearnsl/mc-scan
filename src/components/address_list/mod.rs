@@ -2,11 +2,12 @@ pub mod add_dialog;
 
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{button, column, container, mouse_area, row, scrollable, svg, text};
+use iced::widget::{button, column, container, mouse_area, row, svg, text};
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 use iced::Length::Fixed;
 use ipnet::IpNet;
-use crate::styles::{c, is_dark, scrollable_style, MONO};
+use crate::components::ui::scrollbar;
+use crate::styles::{c, is_dark, MONO};
 
 #[derive(Debug, Clone)]
 pub enum AddressListMessage {
@@ -75,15 +76,12 @@ impl AddressList {
             list = list.push(range_row(i, net, trash_handle.clone(), hovered, is_scrollable));
         }
 
-        scrollable(list)
+        scrollbar(list)
             .on_scroll(|vp| {
                 AddressListMessage::ScrollChanged(
                     vp.content_bounds().height > vp.bounds().height,
                 )
             })
-            .style(scrollable_style)
-            .width(Fill)
-            .height(Fill)
             .into()
     }
 }
