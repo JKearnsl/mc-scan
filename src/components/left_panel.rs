@@ -38,10 +38,12 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
             .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
             }),
-        text("Сканер Minecraft-серверов").size(13).font(SANS)
-            .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
-            }),
+        container(
+            text("Сканер Minecraft-серверов").size(13).font(SANS)
+                .style(|t: &Theme| text::Style {
+                    color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+                })
+        ).padding(Padding { top: 3.0, ..Default::default() }),
     ]
     .align_y(Alignment::Center)
     .spacing(12);
