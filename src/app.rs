@@ -3,7 +3,7 @@ use futures::channel::mpsc;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use iced::{window, Element, Subscription, Task, Theme};
-
+use crate::components::{address_list, settings};
 use crate::components::address_list::{AddressList, AddressListMessage};
 use crate::components::results_list::{ResultsList, ResultsListMessage};
 use crate::scanner::parse::{parse_ip_ranges, parse_ports};
@@ -182,7 +182,7 @@ impl McScan {
     pub fn view(&self) -> Element<'_, Message> {
         use iced::widget::{container, row, Space, Stack};
         use iced::{Fill, Length::Fixed};
-        use crate::components::{left_panel, modals, right_panel};
+        use crate::components::{left_panel, right_panel};
         use crate::styles::{c, is_dark};
 
         let sep = container(Space::new())
@@ -209,8 +209,8 @@ impl McScan {
 
         match &self.modal {
             ModalKind::None      => base,
-            ModalKind::Settings  => Stack::new().push(base).push(modals::settings(self)).into(),
-            ModalKind::AddRanges => Stack::new().push(base).push(modals::add_ranges(self)).into(),
+            ModalKind::Settings  => Stack::new().push(base).push(settings::render(self)).into(),
+            ModalKind::AddRanges => Stack::new().push(base).push(address_list::add_dialog::render(self)).into(),
         }
     }
 

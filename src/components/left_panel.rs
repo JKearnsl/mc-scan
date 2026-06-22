@@ -1,10 +1,10 @@
-use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
 use iced::widget::{column, container, progress_bar, row, text};
 use iced::Length::Fixed;
-use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
+use iced::{Alignment, Border, Color, Element, Fill, Padding, Theme};
 
 use crate::app::{McScan, Message};
+use crate::components::ui::{divider, status_badge};
 use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -13,17 +13,9 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         .padding(Padding { top: 18.0, right: 20.0, bottom: 16.0, left: 20.0 })
         .width(Fill);
 
-    let divider = container(Space::new().height(Fixed(0.0)))
-        .style(|t: &Theme| ContainerStyle {
-            background: Some(Background::Color(if is_dark(t) { c("#1A1F27") } else { c("#E1E5EA") })),
-            ..Default::default()
-        })
-        .width(Fill)
-        .height(Fixed(1.0));
-
     let results = app.results.view().map(Message::ResultsList);
 
-    column![header, divider, results].width(Fill).height(Fill).into()
+    column![header, divider(), results].width(Fill).height(Fill).into()
 }
 
 fn header_col(app: &McScan) -> Element<'_, Message> {
@@ -41,49 +33,26 @@ fn header_col(app: &McScan) -> Element<'_, Message> {
 fn title_row(app: &McScan) -> Element<'_, Message> {
     let found = app.results.count();
 
-    let badge = container(
-        row![
-            text("●").size(9).font(MONO)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#3DD68C") } else { c("#18A862") }),
-                }),
-            text(format!("{} найдено", found)).size(13).font(MONO)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#9FE9C4") } else { c("#0B6040") }),
-                }),
-        ]
-        .align_y(Alignment::Center)
-        .spacing(8),
-    )
-    .style(|t: &Theme| {
-        let (bg_a, brd_a) = if is_dark(t) { (0.12f32, 0.25f32) } else { (0.08, 0.20) };
-        let (r, g, b) = if is_dark(t) { (0.239f32, 0.839, 0.549) } else { (0.094, 0.659, 0.384) };
-        ContainerStyle {
-            background: Some(Background::Color(Color { r, g, b, a: bg_a })),
-            border: Border { color: Color { r, g, b, a: brd_a }, width: 1.0, radius: 8.0.into() },
-            ..Default::default()
-        }
-    })
-    .padding(Padding { top: 5.0, right: 11.0, bottom: 5.0, left: 11.0 });
-
-    row![
-        row![
-            text("mc-scan").size(18).font(MONO_SEMIBOLD)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
-                }),
-            text("сканер Minecraft-серверов").size(13).font(SANS)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
-                }),
-        ]
-        .align_y(Alignment::Center)
-        .spacing(12),
-        Space::new().width(Fill),
-        badge,
+    let title = row![
+        text("mc-scan").size(18).font(MONO_SEMIBOLD)
+            .style(|t: &Theme| text::Style {
+                color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
+            }),
+        text("Сканер Minecraft-серверов").size(13).font(SANS)
+            .style(|t: &Theme| text::Style {
+                color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+            }),
     ]
     .align_y(Alignment::Center)
-    .into()
+    .spacing(12);
+
+    let mut r = row![title, Space::new().width(Fill)].align_y(Alignment::Center);
+
+    if found > 0 {
+        r = r.push(status_badge(format!("{} найдено", found)));
+    }
+
+    r.into()
 }
 
 fn header_style_fn(t: &Theme) -> iced::widget::container::Style {

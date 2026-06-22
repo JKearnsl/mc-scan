@@ -5,6 +5,7 @@ use iced::Length::Fixed;
 use iced::{Alignment, Background, ContentFit, Element, Fill, Padding, Theme};
 
 use crate::app::{McScan, Message, ModalKind};
+use crate::components::ui::divider;
 use crate::styles::{button_danger, button_primary, c, icon_button_style, is_dark, MONO, SANS, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -32,14 +33,6 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     ]
     .align_y(Alignment::Center);
 
-    let divider = container(Space::new().height(1))
-        .style(|t: &Theme| ContainerStyle {
-            background: Some(Background::Color(if is_dark(t) { c("#1A1F27") } else { c("#E1E5EA") })),
-            ..Default::default()
-        })
-        .width(Fill)
-        .height(Fixed(1.0));
-
     let total_row = row![
         text("Всего адресов").size(12).font(SANS)
             .style(|t: &Theme| iced::widget::text::Style {
@@ -61,7 +54,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             Space::new().height(6),
             app.address_list.view().map(Message::AddressList),
             Space::new().height(8),
-            divider,
+            divider(),
             Space::new().height(8),
             total_row,
         ]

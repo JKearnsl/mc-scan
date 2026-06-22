@@ -1,11 +1,11 @@
 use iced::widget::space::Space;
 use iced::widget::{button, column, container, row, text};
 use iced::Length::Fixed;
-use iced::{Element, Fill, Theme};
+use iced::{Element, Fill};
 
 use crate::app::{McScan, Message};
-use crate::components::ui::{dialog, labeled_input, section_label};
-use crate::styles::{button_primary, button_secondary, c, is_dark, SANS_SEMIBOLD};
+use crate::components::ui::{btn, dialog, labeled_input, section_label, BtnVariant};
+use crate::styles::{button_primary, button_secondary, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let is_dark_theme = app.is_dark;
@@ -40,19 +40,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         Space::new().height(6),
         labeled_input("Таймаут мс", &app.settings.timeout_ms,     "1500",  Message::TimeoutChanged,      false),
         Space::new().height(20),
-        button(
-            container(
-                text("Готово").size(15).font(SANS_SEMIBOLD)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(if is_dark(t) { c("#08110B") } else { c("#FFFFFF") }),
-                    }),
-            )
-            .center(Fill),
-        )
-        .on_press(Message::CloseModal)
-        .style(button_primary)
-        .width(Fill)
-        .height(Fixed(44.0)),
+        btn("Готово", Message::CloseModal, BtnVariant::Primary),
     ];
 
     dialog("Настройки", Message::CloseModal, 380.0, body.into())

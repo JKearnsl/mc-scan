@@ -74,21 +74,3 @@ fn text_input_error_style(
         selection: Color { r: 0.898, g: 0.376, b: 0.302, a: 0.25 },
     }
 }
-
-pub fn text_editor_style(
-    t: &Theme,
-    _: iced::widget::text_editor::Status,
-) -> iced::widget::text_editor::Style {
-    let dark = is_dark(t);
-    iced::widget::text_editor::Style {
-        background: Background::Color(if dark { c("#181D25") } else { c("#FFFFFF") }),
-        border: Border {
-            color: if dark { c("#232A34") } else { c("#DDE2E8") },
-            width: 1.0,
-            radius: 7.0.into(),
-        },
-        placeholder: if dark { c("#5C636F") } else { c("#A0A7B1") },
-        value: if dark { c("#E8EBF0") } else { c("#161A20") },
-        selection: Color { r: 0.239, g: 0.839, b: 0.549, a: 0.25 },
-    }
-}

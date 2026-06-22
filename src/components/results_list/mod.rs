@@ -3,6 +3,7 @@ use iced::widget::space::Space;
 use iced::widget::{column, container, row, scrollable, text, Stack};
 use iced::{gradient, Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 use iced::Length::Fixed;
+use crate::components::ui::chip;
 use crate::scanner::types::{Edition, ServerInfo};
 use crate::styles::{c, is_dark, scrollable_style, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
 
@@ -181,25 +182,7 @@ fn version_column(version: String, software: Option<String>) -> Element<'static,
     .align_x(iced::alignment::Horizontal::Right);
 
     if let Some(sw) = software {
-        let badge = container(
-            text(sw)
-                .size(11)
-                .font(MONO)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
-                }),
-        )
-        .style(|t: &Theme| ContainerStyle {
-            background: Some(Background::Color(if is_dark(t) { c("#1F2630") } else { c("#EEF0F3") })),
-            border: Border {
-                color: if is_dark(t) { c("#2A3240") } else { c("#DDE2E8") },
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            ..Default::default()
-        })
-        .padding(Padding::from([2, 6]));
-        col = col.push(badge);
+        col = col.push(chip(sw));
     }
 
     col.width(Fixed(150.0)).into()
