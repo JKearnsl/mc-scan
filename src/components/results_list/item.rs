@@ -31,7 +31,7 @@ pub fn server_card(info: &ServerInfo) -> Element<'_, ResultsListMessage> {
             text(description)
                 .size(13)
                 .font(SANS)
-                .style(|t: &Theme| iced::widget::text::Style {
+                .style(|t: &Theme| text::Style {
                     color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
                 })
                 .wrapping(text::Wrapping::None),
@@ -75,14 +75,14 @@ fn players_column(online: u64, max: u64) -> Element<'static, ResultsListMessage>
         text("ИГРОКИ")
             .size(10)
             .font(SANS_SEMIBOLD)
-            .style(|t: &Theme| iced::widget::text::Style {
+            .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
             }),
         row![
             text("●")
                 .size(8)
                 .font(MONO)
-                .style(|t: &Theme| iced::widget::text::Style {
+                .style(|t: &Theme| text::Style {
                     color: Some(if is_dark(t) { c("#3DD68C") } else { c("#18A862") }),
                 }),
             text(format!("{} / {}", online, max))
@@ -111,7 +111,7 @@ fn stat_column(
         text(label)
             .size(10)
             .font(SANS_SEMIBOLD)
-            .style(|t: &Theme| iced::widget::text::Style {
+            .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
             }),
         text(value)

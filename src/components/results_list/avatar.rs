@@ -46,12 +46,12 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
             text(badge_letter)
                 .size(9)
                 .font(MONO_SEMIBOLD)
-                .style(move |_: &Theme| iced::widget::text::Style { color: Some(badge_text_col) }),
+                .style(move |_: &Theme| text::Style { color: Some(badge_text_col) }),
         )
         .style(move |t: &Theme| ContainerStyle {
             background: Some(Background::Color(badge_bg)),
             border: Border {
-                color: if is_dark(t) { c("#181D25") } else { c("#E1E5EA") },
+                color: Color::TRANSPARENT,
                 width: 2.0,
                 radius: 5.0.into(),
             },
@@ -73,8 +73,8 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
     Stack::new()
         .push(avatar_layer)
         .push(badge_inner)
-        .width(Fixed(52.0))
-        .height(Fixed(52.0))
+        .width(Fixed(56.0))
+        .height(Fixed(56.0))
         .into()
 }
 
