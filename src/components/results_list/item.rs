@@ -5,13 +5,14 @@ use iced::Length::Fixed;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
 use crate::components::ui::chip;
+use crate::i18n::Tr;
 use crate::scanner::types::ServerInfo;
 use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
 
 use super::avatar::build_avatar;
 use super::ResultsListMessage;
 
-pub fn server_card(info: &ServerInfo) -> Element<'_, ResultsListMessage> {
+pub fn server_card<'a>(info: &'a ServerInfo, tr: &'static Tr) -> Element<'a, ResultsListMessage> {
     let (name, description) = split_motd(&info.motd);
     let avatar = build_avatar(&name, &info.edition);
     let ip_port = format!("{}:{}", info.addr.ip(), info.addr.port());
@@ -53,9 +54,9 @@ pub fn server_card(info: &ServerInfo) -> Element<'_, ResultsListMessage> {
     let (software, ver_str) = parse_version(&info.version);
 
     let right_block = row![
-        players_column(info.online as u64, info.max_players as u64),
-        stat_column("ПИНГ", ping_str, ping_color(info.latency_ms), Fixed(68.0)),
-        version_column(ver_str, software),
+        players_column(info.online as u64, info.max_players as u64, tr.players),
+        stat_column(tr.ping, ping_str, ping_color(info.latency_ms), Fixed(68.0)),
+        version_column(ver_str, software, tr.version),
     ]
     .spacing(4)
     .align_y(Alignment::Start);
@@ -70,9 +71,9 @@ pub fn server_card(info: &ServerInfo) -> Element<'_, ResultsListMessage> {
     .into()
 }
 
-fn players_column(online: u64, max: u64) -> Element<'static, ResultsListMessage> {
+fn players_column(online: u64, max: u64, label: &'static str) -> Element<'static, ResultsListMessage> {
     column![
-        text("ИГРОКИ")
+        text(label)
             .size(10)
             .font(SANS_SEMIBOLD)
             .style(|t: &Theme| text::Style {
@@ -125,9 +126,9 @@ fn stat_column(
     .into()
 }
 
-fn version_column(version: String, software: Option<String>) -> Element<'static, ResultsListMessage> {
+fn version_column(version: String, software: Option<String>, label: &'static str) -> Element<'static, ResultsListMessage> {
     let mut col = column![
-        text("ВЕРСИЯ")
+        text(label)
             .size(10)
             .font(SANS_SEMIBOLD)
             .style(|t: &Theme| iced::widget::text::Style {

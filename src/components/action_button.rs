@@ -7,10 +7,12 @@ use crate::components::ui::{button_danger, button_primary};
 use crate::styles::{c, is_dark, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
+    let tr = app.tr();
+
     if app.is_scanning {
         return button(
             container(
-                text("■  Стоп").size(16).font(SANS_SEMIBOLD)
+                text(tr.stop).size(16).font(SANS_SEMIBOLD)
                     .style(|_: &Theme| iced::widget::text::Style { color: Some(c("#FFFFFF")) }),
             )
             .center(Fill),
@@ -25,7 +27,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let can_scan = !app.address_list.values().is_empty();
     let btn = button(
         container(
-            text("▶  Сканировать").size(16).font(SANS_SEMIBOLD)
+            text(tr.scan).size(16).font(SANS_SEMIBOLD)
                 .style(move |t: &Theme| iced::widget::text::Style {
                     color: Some(if can_scan {
                         if is_dark(t) { c("#08110B") } else { c("#FFFFFF") }

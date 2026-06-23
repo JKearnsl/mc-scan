@@ -7,6 +7,7 @@ use crate::app::{McScan, Message};
 use crate::styles::{c, is_dark, MONO};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
+    let tr = app.tr();
     let ratio = app.scanned_count as f32 / app.total_targets as f32;
     let pct = (ratio * 100.0) as u32;
     let ranges = app.address_list.values();
@@ -25,7 +26,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             .length(Fill),
         Space::new().height(Fixed(9.0)),
         row![
-            text(format!("Сканирование {}", range_str)).size(12).font(MONO)
+            text(format!("{} {}", tr.scanning, range_str)).size(12).font(MONO)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
                 }),

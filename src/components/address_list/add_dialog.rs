@@ -7,9 +7,11 @@ use crate::components::ui::{btn, dialog, textarea, BtnVariant};
 use crate::styles::{c, is_dark, SANS};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
+    let tr = app.tr();
+
     let body = column![
         Space::new().height(4),
-        text("CIDR (10.0.0.0/8) · диапазон (1.2.3.4-1.2.3.100) · одиночный IP")
+        text(tr.add_ranges_hint)
             .size(11)
             .font(SANS)
             .style(|t: &Theme| text::Style {
@@ -19,11 +21,11 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         textarea(&app.ranges_editor, Message::RangesEditorAction, 160.0),
         Space::new().height(16),
         row![
-            btn(BtnVariant::Danger("Отмена"), Message::CloseModal),
+            btn(BtnVariant::Danger(tr.cancel), Message::CloseModal),
             Space::new().width(10),
-            btn(BtnVariant::Primary("Добавить"), Message::ConfirmAddRanges),
+            btn(BtnVariant::Primary(tr.add), Message::ConfirmAddRanges),
         ],
     ];
 
-    dialog("Добавить диапазоны", Message::CloseModal, 460.0, body.into())
+    dialog(tr.add_ranges_title, Message::CloseModal, 460.0, body.into())
 }

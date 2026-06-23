@@ -9,6 +9,7 @@ use crate::components::{action_button, ui::{btn, divider, BtnVariant}};
 use crate::styles::{c, is_dark, MONO, SANS, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
+    let tr = app.tr();
     let settings_icon = svg::Handle::from_path(format!("{}/assets/settings.svg", env!("CARGO_MANIFEST_DIR")));
     let plus_icon = svg::Handle::from_path(format!("{}/assets/plus.svg", env!("CARGO_MANIFEST_DIR")));
 
@@ -24,7 +25,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let total_str = if total_hosts == u64::MAX { "∞".to_string() } else { total_hosts.to_string() };
 
     let ranges_header = row![
-        text(format!("IP-ДИАПАЗОНЫ · {}", range_count)).size(11).font(SANS_SEMIBOLD)
+        text(format!("{} · {}", tr.ip_ranges, range_count)).size(11).font(SANS_SEMIBOLD)
             .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
             }),
@@ -34,7 +35,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     .align_y(Alignment::Center);
 
     let total_row = row![
-        text("Всего адресов").size(12).font(SANS)
+        text(tr.total_addresses).size(12).font(SANS)
             .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#5C636F") } else { c("#5a626c") }),
             }),

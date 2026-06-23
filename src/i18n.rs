@@ -1,0 +1,173 @@
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Language {
+    English,
+    Russian,
+    Chinese,
+    Japanese,
+}
+
+impl Language {
+    pub fn from_locale(locale: &str) -> Self {
+        let l = locale.to_lowercase();
+        if l.starts_with("ru") { Language::Russian }
+        else if l.starts_with("zh") { Language::Chinese }
+        else if l.starts_with("ja") { Language::Japanese }
+        else { Language::English }
+    }
+
+    pub fn detect() -> Self {
+        sys_locale::get_locale()
+            .as_deref()
+            .map(Self::from_locale)
+            .unwrap_or(Language::English)
+    }
+}
+
+pub struct Tr {
+    pub theme: &'static str,
+    pub dark: &'static str,
+    pub light: &'static str,
+    pub language: &'static str,
+    pub ports: &'static str,
+    pub parameters: &'static str,
+    pub threads: &'static str,
+    pub timeout_ms: &'static str,
+    pub done: &'static str,
+    pub subtitle: &'static str,
+    pub found: &'static str,
+    pub ip_ranges: &'static str,
+    pub total_addresses: &'static str,
+    pub scan: &'static str,
+    pub stop: &'static str,
+    pub add_ranges_title: &'static str,
+    pub add_ranges_hint: &'static str,
+    pub add: &'static str,
+    pub cancel: &'static str,
+    pub scanning: &'static str,
+    pub settings: &'static str,
+    pub results_empty: &'static str,
+    pub players: &'static str,
+    pub ping: &'static str,
+    pub version: &'static str,
+}
+
+pub static EN: Tr = Tr {
+    theme: "THEME",
+    dark: "Dark",
+    light: "Light",
+    language: "LANGUAGE",
+    ports: "PORTS",
+    parameters: "PARAMETERS",
+    threads: "Threads",
+    timeout_ms: "Timeout ms",
+    done: "Done",
+    subtitle: "Minecraft server scanner",
+    found: "found",
+    ip_ranges: "IP RANGES",
+    total_addresses: "Total addresses",
+    scan: "\u{25b6}  Scan",
+    stop: "\u{25a0}  Stop",
+    add_ranges_title: "Add ranges",
+    add_ranges_hint: "CIDR (10.0.0.0/8) \u{b7} range (1.2.3.4-1.2.3.100) \u{b7} single IP",
+    add: "Add",
+    cancel: "Cancel",
+    scanning: "Scanning",
+    settings: "Settings",
+    results_empty: "Results will appear here after scanning",
+    players: "PLAYERS",
+    ping: "PING",
+    version: "VERSION",
+};
+
+pub static RU: Tr = Tr {
+    theme: "ТЕМА",
+    dark: "Тёмная",
+    light: "Светлая",
+    language: "ЯЗЫК",
+    ports: "ПОРТЫ",
+    parameters: "ПАРАМЕТРЫ",
+    threads: "Потоки",
+    timeout_ms: "Таймаут мс",
+    done: "Готово",
+    subtitle: "Сканер Minecraft-серверов",
+    found: "найдено",
+    ip_ranges: "IP-ДИАПАЗОНЫ",
+    total_addresses: "Всего адресов",
+    scan: "\u{25b6}  Сканировать",
+    stop: "\u{25a0}  Стоп",
+    add_ranges_title: "Добавить диапазоны",
+    add_ranges_hint: "CIDR (10.0.0.0/8) \u{b7} диапазон (1.2.3.4-1.2.3.100) \u{b7} одиночный IP",
+    add: "Добавить",
+    cancel: "Отмена",
+    scanning: "Сканирование",
+    settings: "Настройки",
+    results_empty: "Результаты появятся здесь после сканирования",
+    players: "ИГРОКИ",
+    ping: "ПИНГ",
+    version: "ВЕРСИЯ",
+};
+
+pub static ZH: Tr = Tr {
+    theme: "主题",
+    dark: "深色",
+    light: "浅色",
+    language: "语言",
+    ports: "端口",
+    parameters: "参数",
+    threads: "线程",
+    timeout_ms: "超时 ms",
+    done: "完成",
+    subtitle: "Minecraft 服务器扫描器",
+    found: "已发现",
+    ip_ranges: "IP 范围",
+    total_addresses: "地址总数",
+    scan: "\u{25b6}  扫描",
+    stop: "\u{25a0}  停止",
+    add_ranges_title: "添加范围",
+    add_ranges_hint: "CIDR (10.0.0.0/8) \u{b7} 范围 (1.2.3.4-1.2.3.100) \u{b7} 单个 IP",
+    add: "添加",
+    cancel: "取消",
+    scanning: "扫描中",
+    settings: "设置",
+    results_empty: "扫描完成后结果将显示在此处",
+    players: "玩家",
+    ping: "延迟",
+    version: "版本",
+};
+
+pub static JA: Tr = Tr {
+    theme: "テーマ",
+    dark: "ダーク",
+    light: "ライト",
+    language: "言語",
+    ports: "ポート",
+    parameters: "パラメータ",
+    threads: "スレッド",
+    timeout_ms: "タイムアウト ms",
+    done: "完了",
+    subtitle: "Minecraft サーバースキャナー",
+    found: "件見つかりました",
+    ip_ranges: "IP 範囲",
+    total_addresses: "合計アドレス",
+    scan: "\u{25b6}  スキャン",
+    stop: "\u{25a0}  停止",
+    add_ranges_title: "範囲を追加",
+    add_ranges_hint: "CIDR (10.0.0.0/8) \u{b7} 範囲 (1.2.3.4-1.2.3.100) \u{b7} 単一 IP",
+    add: "追加",
+    cancel: "キャンセル",
+    scanning: "スキャン中",
+    settings: "設定",
+    results_empty: "スキャン後、結果がここに表示されます",
+    players: "プレイヤー",
+    ping: "PING",
+    version: "バージョン",
+};
+
+pub fn tr(lang: Language) -> &'static Tr {
+    match lang {
+        Language::English  => &EN,
+        Language::Russian  => &RU,
+        Language::Chinese  => &ZH,
+        Language::Japanese => &JA,
+    }
+}

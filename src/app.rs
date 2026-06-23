@@ -6,6 +6,7 @@ use iced::{window, Element, Subscription, Task, Theme};
 use crate::components::{address_list, settings};
 use crate::components::address_list::{AddressList, AddressListMessage};
 use crate::components::results_list::{ResultsList, ResultsListMessage};
+use crate::i18n::{self, Language, Tr};
 use crate::scanner::parse::{parse_ip_ranges, parse_ports};
 use crate::scanner::types::{ScanConfig, ServerInfo};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
@@ -36,6 +37,7 @@ pub enum Message {
     RangesEditorAction(iced::widget::text_editor::Action),
     ConfirmAddRanges,
     SetTheme(bool),
+    SetLanguage(Language),
 }
 
 pub struct ScanSettings {
@@ -77,6 +79,7 @@ pub struct McScan {
     pub(crate) modal: ModalKind,
     pub(crate) ranges_editor: iced::widget::text_editor::Content,
     pub(crate) is_dark: bool,
+    pub(crate) language: Language,
 }
 
 impl McScan {
@@ -93,6 +96,7 @@ impl McScan {
             modal: ModalKind::None,
             ranges_editor: iced::widget::text_editor::Content::new(),
             is_dark: true,
+            language: Language::detect(),
         };
         (app, Task::discard(window::latest()).map(Message::WindowInitialized))
     }
@@ -170,7 +174,12 @@ impl McScan {
             }
 
             Message::SetTheme(dark) => self.is_dark = dark,
+            Message::SetLanguage(lang) => self.language = lang,
         }
+    }
+
+    pub fn tr(&self) -> &'static Tr {
+        i18n::tr(self.language)
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
