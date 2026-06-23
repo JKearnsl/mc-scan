@@ -15,7 +15,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
     let results = app.results.view().map(Message::ResultsList);
 
-    column![header, divider(), results].width(Fill).height(Fill).into()
+    column![header, results].width(Fill).height(Fill).into()
 }
 
 fn header_col(app: &McScan) -> Element<'_, Message> {
@@ -39,9 +39,9 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
                 color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
             }),
         container(
-            text("Сканер Minecraft-серверов").size(13).font(SANS)
+            text("Сканер Minecraft-серверов").size(13.5).font(SANS)
                 .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+                    color: Some(if is_dark(t) { c("#6B7480") } else { c("#5a626c") }),
                 })
         ).padding(Padding { top: 3.0, ..Default::default() }),
     ]
@@ -59,7 +59,7 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
 
 fn header_style_fn(t: &Theme) -> container::Style {
     container::Style {
-        background: Some(iced::Background::Color(if is_dark(t) { c("#0E1116") } else { c("#FFFFFF") })),
+        background: None,
         ..Default::default()
     }
 }

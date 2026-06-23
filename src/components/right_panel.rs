@@ -36,7 +36,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let total_row = row![
         text("Всего адресов").size(12).font(SANS)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                color: Some(if is_dark(t) { c("#5C636F") } else { c("#5a626c") }),
             }),
         Space::new().width(Fill),
         text(total_str).size(12).font(MONO)
@@ -55,7 +55,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             app.address_list.view().map(Message::AddressList),
             Space::new().height(8),
             divider(),
-            Space::new().height(8),
+            Space::new().height(12),
             total_row,
         ]
         .padding(Padding::from([16, 16]))

@@ -67,6 +67,3 @@ pub static COLOR_THEME_LIGHT: Lazy<Theme> = Lazy::new(|| {
         },
     )
 });
-
-
-

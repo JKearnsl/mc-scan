@@ -136,7 +136,7 @@ fn version_column(version: String, software: Option<String>) -> Element<'static,
         text(version)
             .size(13)
             .font(MONO)
-            .style(|t: &Theme| iced::widget::text::Style {
+            .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
             }),
     ]

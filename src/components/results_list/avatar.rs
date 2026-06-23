@@ -1,7 +1,7 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::{container, text, Stack};
 use iced::Length::Fixed;
-use iced::{gradient, Background, Border, Color, Element, Theme};
+use iced::{gradient, Background, Border, Color, Element, Shadow, Theme};
 
 use crate::scanner::types::Edition;
 use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS_SEMIBOLD};
@@ -18,7 +18,7 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
         text(first.to_string())
             .size(22)
             .font(SANS_SEMIBOLD)
-            .style(move |_: &Theme| iced::widget::text::Style { color: Some(letter_color) }),
+            .style(move |_: &Theme| text::Style { color: Some(letter_color) }),
     )
     .style(move |t: &Theme| ContainerStyle {
         background: Some(Background::Gradient(
@@ -28,7 +28,7 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
                 .into(),
         )),
         border: Border {
-            color: if is_dark(t) { c("#232A34") } else { c("#E1E5EA") },
+            color: Color::TRANSPARENT,
             width: 1.0,
             radius: 8.0.into(),
         },
@@ -51,7 +51,7 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
         .style(move |t: &Theme| ContainerStyle {
             background: Some(Background::Color(badge_bg)),
             border: Border {
-                color: Color::TRANSPARENT,
+                color: if is_dark(t) { c("#181D25") } else { c("#FFFFFF") },
                 width: 2.0,
                 radius: 5.0.into(),
             },
