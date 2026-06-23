@@ -1,6 +1,6 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{column, container, row, text};
+use iced::widget::{column, container, row, text, text_input};
 use iced::Length::Fixed;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
@@ -21,7 +21,7 @@ pub fn server_card<'a>(info: &'a ServerInfo, tr: &'static Tr) -> Element<'a, Res
         text(name)
             .size(16)
             .font(SANS_SEMIBOLD)
-            .style(|t: &Theme| iced::widget::text::Style {
+            .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
             })
             .wrapping(text::Wrapping::None),
@@ -40,11 +40,20 @@ pub fn server_card<'a>(info: &'a ServerInfo, tr: &'static Tr) -> Element<'a, Res
     }
 
     left_col = left_col.push(
-        text(ip_port)
+        text_input("", &ip_port)
             .size(13)
             .font(MONO)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+            .padding(Padding::ZERO)
+            .style(|t: &Theme, _| {
+                let color = if is_dark(t) { c("#6B7480") } else { c("#8A929E") };
+                text_input::Style {
+                    background: Background::Color(Color::TRANSPARENT),
+                    border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 0.0.into() },
+                    icon: Color::TRANSPARENT,
+                    placeholder: color,
+                    value: color,
+                    selection: Color { r: 0.239, g: 0.839, b: 0.549, a: 0.25 },
+                }
             }),
     );
 

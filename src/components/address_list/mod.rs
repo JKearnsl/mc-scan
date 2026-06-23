@@ -2,7 +2,7 @@ pub mod add_dialog;
 
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{button, column, container, mouse_area, row, svg, text};
+use iced::widget::{button, column, container, mouse_area, row, svg, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 use iced::Length::Fixed;
 use ipnet::IpNet;
@@ -93,14 +93,8 @@ fn range_row(
     is_hovered: bool,
     is_scrollable: bool,
 ) -> Element<'_, AddressListMessage> {
-    let row_content = row![
-        text(net.to_string())
-            .size(13)
-            .font(MONO)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(if is_dark(t) { c("#C4CAD4") } else { c("#3A4049") }),
-            }),
-        Space::new().width(Fill),
+    let net_str = net.to_string();
+    let right_side = row![
         text(format_host_count(net_host_count(net)))
             .size(11)
             .font(MONO)
@@ -120,6 +114,26 @@ fn range_row(
         .style(trash_btn_style)
         .padding(Padding::from([4, 4]))
         .on_press(AddressListMessage::RemoveClicked(index)),
+    ]
+    .align_y(Alignment::Center);
+
+    let row_content = row![
+        text_input("", &net_str)
+            .size(13)
+            .font(MONO)
+            .padding(Padding::ZERO)
+            .style(|t: &Theme, _| {
+                let color = if is_dark(t) { c("#C4CAD4") } else { c("#3A4049") };
+                iced::widget::text_input::Style {
+                    background: Background::Color(Color::TRANSPARENT),
+                    border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 0.0.into() },
+                    icon: Color::TRANSPARENT,
+                    placeholder: color,
+                    value: color,
+                    selection: Color { r: 0.239, g: 0.839, b: 0.549, a: 0.25 },
+                }
+            }),
+        right_side,
     ]
     .align_y(Alignment::Center);
 
