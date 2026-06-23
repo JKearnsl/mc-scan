@@ -1,8 +1,6 @@
-use iced::border::Radius;
 use iced::font::{Family, Stretch, Style as FontStyle, Weight};
 use iced::theme::Palette;
-use iced::widget::button::{Status as ButtonStatus, Style as ButtonStyle};
-use iced::{Background, Border, Color, Font, Shadow, Theme};
+use iced::{Color, Font, Theme};
 use once_cell::sync::Lazy;
 
 pub fn c(hex: &str) -> Color {
@@ -70,50 +68,5 @@ pub static COLOR_THEME_LIGHT: Lazy<Theme> = Lazy::new(|| {
     )
 });
 
-// Buttons
-
-pub fn button_primary(t: &Theme, status: ButtonStatus) -> ButtonStyle {
-    let dark = is_dark(t);
-    let accent     = if dark { c("#3DD68C") } else { c("#18A862") };
-    let accent_hov = if dark { c("#34C27E") } else { c("#138A52") };
-    let accent_prs = if dark { c("#2BAD6F") } else { c("#0F7040") };
-    let text_en    = if dark { c("#08110B") } else { c("#FFFFFF") };
-    let dis_bg     = if dark { c("#1A1F27") } else { c("#DDE2E8") };
-    let dis_text   = if dark { c("#5C636F") } else { c("#A0A7B1") };
-
-    let base = ButtonStyle {
-        background: Some(Background::Color(accent)),
-        text_color: text_en,
-        border: Border { color: Color::TRANSPARENT, width: 0.0, radius: Radius::from(10) },
-        shadow: Shadow::default(),
-        snap: false,
-    };
-    match status {
-        ButtonStatus::Hovered  => ButtonStyle { background: Some(Background::Color(accent_hov)), ..base },
-        ButtonStatus::Pressed  => ButtonStyle { background: Some(Background::Color(accent_prs)), ..base },
-        ButtonStatus::Disabled => ButtonStyle { background: Some(Background::Color(dis_bg)), text_color: dis_text, ..base },
-        _ => base,
-    }
-}
-
-pub fn button_danger(t: &Theme, status: ButtonStatus) -> ButtonStyle {
-    let dark = is_dark(t);
-    let bg     = if dark { c("#E5604D") } else { c("#CC3A28") };
-    let bg_hov = if dark { c("#CC4A38") } else { c("#B33525") };
-    let bg_prs = if dark { c("#B33525") } else { c("#982A1E") };
-
-    let base = ButtonStyle {
-        background: Some(Background::Color(bg)),
-        text_color: c("#FFFFFF"),
-        border: Border { color: Color::TRANSPARENT, width: 0.0, radius: Radius::from(10) },
-        shadow: Shadow::default(),
-        snap: false,
-    };
-    match status {
-        ButtonStatus::Hovered => ButtonStyle { background: Some(Background::Color(bg_hov)), ..base },
-        ButtonStatus::Pressed => ButtonStyle { background: Some(Background::Color(bg_prs)), ..base },
-        _ => base,
-    }
-}
 
 

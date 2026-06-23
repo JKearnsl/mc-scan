@@ -3,7 +3,8 @@ use iced::Length::Fixed;
 use iced::{Element, Fill, Theme};
 
 use crate::app::{McScan, Message};
-use crate::styles::{button_danger, button_primary, c, is_dark, SANS_SEMIBOLD};
+use crate::components::ui::{button_danger, button_primary};
+use crate::styles::{c, is_dark, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     if app.is_scanning {

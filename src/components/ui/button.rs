@@ -1,8 +1,8 @@
 use iced::widget::{button, container, svg, text};
 use iced::Length::Fixed;
-use iced::{Background, Border, ContentFit, Element, Fill, Padding, Shadow, Theme};
+use iced::{Background, Border, Color, ContentFit, Element, Fill, Padding, Shadow, Theme};
 
-use crate::styles::{button_danger, button_primary, c, is_dark, SANS_SEMIBOLD};
+use crate::styles::{c, is_dark, SANS_SEMIBOLD};
 
 pub enum BtnVariant<'a> {
     Primary(&'a str),
@@ -59,6 +59,50 @@ pub fn btn<'a, M: Clone + 'a>(variant: BtnVariant<'a>, on_press: M) -> Element<'
             .height(Fixed(btn_size))
             .into()
         }
+    }
+}
+
+pub fn button_primary(t: &Theme, status: button::Status) -> button::Style {
+    let dark = is_dark(t);
+    let accent     = if dark { c("#3DD68C") } else { c("#18A862") };
+    let accent_hov = if dark { c("#34C27E") } else { c("#138A52") };
+    let accent_prs = if dark { c("#2BAD6F") } else { c("#0F7040") };
+    let text_en    = if dark { c("#08110B") } else { c("#FFFFFF") };
+    let dis_bg     = if dark { c("#1A1F27") } else { c("#DDE2E8") };
+    let dis_text   = if dark { c("#5C636F") } else { c("#A0A7B1") };
+
+    let base = button::Style {
+        background: Some(Background::Color(accent)),
+        text_color: text_en,
+        border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 10.0.into() },
+        shadow: Shadow::default(),
+        snap: false,
+    };
+    match status {
+        button::Status::Hovered  => button::Style { background: Some(Background::Color(accent_hov)), ..base },
+        button::Status::Pressed  => button::Style { background: Some(Background::Color(accent_prs)), ..base },
+        button::Status::Disabled => button::Style { background: Some(Background::Color(dis_bg)), text_color: dis_text, ..base },
+        _ => base,
+    }
+}
+
+pub fn button_danger(t: &Theme, status: button::Status) -> button::Style {
+    let dark = is_dark(t);
+    let bg     = if dark { c("#E5604D") } else { c("#CC3A28") };
+    let bg_hov = if dark { c("#CC4A38") } else { c("#B33525") };
+    let bg_prs = if dark { c("#B33525") } else { c("#982A1E") };
+
+    let base = button::Style {
+        background: Some(Background::Color(bg)),
+        text_color: c("#FFFFFF"),
+        border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 10.0.into() },
+        shadow: Shadow::default(),
+        snap: false,
+    };
+    match status {
+        button::Status::Hovered => button::Style { background: Some(Background::Color(bg_hov)), ..base },
+        button::Status::Pressed => button::Style { background: Some(Background::Color(bg_prs)), ..base },
+        _ => base,
     }
 }
 
