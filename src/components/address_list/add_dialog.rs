@@ -27,5 +27,5 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         ],
     ];
 
-    dialog(tr.add_ranges_title, Message::CloseModal, 460.0, body.into())
+    dialog(tr.add_ranges_title, Message::CloseModal, Message::NoOp, 460.0, body.into())
 }

@@ -45,6 +45,7 @@ pub enum Message {
     CopiedReset,
     RefreshTick,
     ServerRefreshed(Option<ServerInfo>),
+    NoOp,
 }
 
 pub struct ScanSettings {
@@ -254,6 +255,8 @@ impl McScan {
             }
 
             Message::ServerRefreshed(None) => {}
+
+            Message::NoOp => {}
         }
 
         Task::none()

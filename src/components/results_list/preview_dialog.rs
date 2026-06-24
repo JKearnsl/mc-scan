@@ -238,7 +238,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     .style(dialog_bg_style);
 
     mouse_area(
-        container(dialog)
+        container(mouse_area(dialog).on_press(Message::NoOp))
             .center_x(Fill)
             .center_y(Fill)
             .style(|_: &Theme| ContainerStyle {
@@ -246,6 +246,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
                 ..Default::default()
             }),
     )
+    .on_press(Message::CloseModal)
     .interaction(Interaction::Idle)
     .into()
 }

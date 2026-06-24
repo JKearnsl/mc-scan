@@ -66,5 +66,5 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         btn(BtnVariant::Primary(tr.done), Message::CloseModal),
     ];
 
-    dialog(tr.settings, Message::CloseModal, 380.0, body.into())
+    dialog(tr.settings, Message::CloseModal, Message::NoOp, 380.0, body.into())
 }
