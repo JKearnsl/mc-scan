@@ -64,5 +64,7 @@ fn parse_motd(raw: &str, addr: SocketAddr, latency_ms: u64) -> Option<ServerInfo
         online: parts[4].parse().unwrap_or(0),
         max_players: parts[5].parse().unwrap_or(0),
         latency_ms,
+        samples: vec![],
+        ping_history: vec![latency_ms],
     })
 }

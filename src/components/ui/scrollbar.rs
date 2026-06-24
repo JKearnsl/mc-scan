@@ -1,4 +1,4 @@
-use iced::widget::scrollable::{default, Rail, Scroller, Status, Style};
+use iced::widget::scrollable::{default, Direction, Rail, Scroller, Scrollbar, Status, Style};
 use iced::widget::{scrollable, Scrollable};
 use iced::{border, Background, Element, Fill, Theme};
 
@@ -9,6 +9,9 @@ pub fn scrollbar<'a, M: Clone + 'a>(content: impl Into<Element<'a, M>>) -> Scrol
         .style(style)
         .width(Fill)
         .height(Fill)
+        .direction(Direction::Vertical(
+            Scrollbar::new().width(4.0).margin(6.0).scroller_width(4.0),
+        ))
 }
 
 fn style(t: &Theme, status: Status) -> Style {

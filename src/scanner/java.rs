@@ -28,6 +28,8 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
         online: json["players"]["online"].as_u64().unwrap_or(0) as u32,
         max_players: json["players"]["max"].as_u64().unwrap_or(0) as u32,
         latency_ms,
+        samples: parse_samples(&json["players"]["sample"]),
+        ping_history: vec![latency_ms],
     })
 }
 
@@ -88,6 +90,16 @@ fn write_string(buf: &mut Vec<u8>, s: &str) {
     let bytes = s.as_bytes();
     write_varint(buf, bytes.len() as i32);
     buf.extend_from_slice(bytes);
+}
+
+fn parse_samples(v: &Value) -> Vec<String> {
+    v.as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|p| p["name"].as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn parse_description(v: &Value) -> String {

@@ -58,7 +58,7 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
     r.into()
 }
 
-fn header_style_fn(t: &Theme) -> container::Style {
+fn header_style_fn(_t: &Theme) -> container::Style {
     container::Style {
         background: None,
         ..Default::default()

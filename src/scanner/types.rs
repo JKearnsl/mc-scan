@@ -26,6 +26,8 @@ pub struct ServerInfo {
     pub online: u32,
     pub max_players: u32,
     pub latency_ms: u64,
+    pub samples: Vec<String>,
+    pub ping_history: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Hash)]

@@ -49,6 +49,18 @@ pub struct Tr {
     pub players: &'static str,
     pub ping: &'static str,
     pub version: &'static str,
+    pub online: &'static str,
+    pub address: &'static str,
+    pub copy: &'static str,
+    pub copied: &'static str,
+    pub protocol: &'static str,
+    pub software: &'static str,
+    pub edition: &'static str,
+    pub motd: &'static str,
+    pub players_online: &'static str,
+    pub latency: &'static str,
+    pub java_edition: &'static str,
+    pub bedrock_edition: &'static str,
 }
 
 pub static EN: Tr = Tr {
@@ -77,6 +89,18 @@ pub static EN: Tr = Tr {
     players: "PLAYERS",
     ping: "PING",
     version: "VERSION",
+    online: "Online",
+    address: "ADDRESS",
+    copy: "Copy IP",
+    copied: "Copied!",
+    protocol: "PROTOCOL",
+    software: "SOFTWARE",
+    edition: "EDITION",
+    motd: "DESCRIPTION",
+    players_online: "PLAYERS ONLINE",
+    latency: "PING HISTORY",
+    java_edition: "Java Edition",
+    bedrock_edition: "Bedrock",
 };
 
 pub static RU: Tr = Tr {
@@ -105,6 +129,18 @@ pub static RU: Tr = Tr {
     players: "ИГРОКИ",
     ping: "ПИНГ",
     version: "ВЕРСИЯ",
+    online: "В сети",
+    address: "АДРЕС",
+    copy: "Копировать IP",
+    copied: "Скопировано!",
+    protocol: "ПРОТОКОЛ",
+    software: "ПЛАТФОРМА",
+    edition: "ИЗДАНИЕ",
+    motd: "ОПИСАНИЕ",
+    players_online: "ИГРОКИ ОНЛАЙН",
+    latency: "ИСТОРИЯ ПИНГА",
+    java_edition: "Java Edition",
+    bedrock_edition: "Bedrock",
 };
 
 pub static ZH: Tr = Tr {
@@ -133,6 +169,18 @@ pub static ZH: Tr = Tr {
     players: "玩家",
     ping: "延迟",
     version: "版本",
+    online: "在线",
+    address: "地址",
+    copy: "复制 IP",
+    copied: "已复制!",
+    protocol: "协议",
+    software: "软件",
+    edition: "版本类型",
+    motd: "描述",
+    players_online: "在线玩家",
+    latency: "延迟历史",
+    java_edition: "Java 版",
+    bedrock_edition: "基岩版",
 };
 
 pub static JA: Tr = Tr {
@@ -161,6 +209,18 @@ pub static JA: Tr = Tr {
     players: "プレイヤー",
     ping: "PING",
     version: "バージョン",
+    online: "オンライン",
+    address: "アドレス",
+    copy: "IP をコピー",
+    copied: "コピーしました!",
+    protocol: "プロトコル",
+    software: "ソフトウェア",
+    edition: "エディション",
+    motd: "説明",
+    players_online: "プレイヤー一覧",
+    latency: "ピング履歴",
+    java_edition: "Java Edition",
+    bedrock_edition: "Bedrock",
 };
 
 pub fn tr(lang: Language) -> &'static Tr {

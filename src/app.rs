@@ -1,5 +1,7 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
-use futures::channel::mpsc;
+use std::time::Duration;
+use futures::channel::{mpsc, oneshot};
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use iced::{window, Element, Subscription, Task, Theme};
@@ -16,6 +18,7 @@ pub enum ModalKind {
     None,
     Settings,
     AddRanges,
+    ServerPreview(SocketAddr),
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +41,10 @@ pub enum Message {
     ConfirmAddRanges,
     SetTheme(bool),
     SetLanguage(Language),
+    CopyAddress,
+    CopiedReset,
+    RefreshTick,
+    ServerRefreshed(Option<ServerInfo>),
 }
 
 pub struct ScanSettings {
@@ -80,6 +87,8 @@ pub struct McScan {
     pub(crate) ranges_editor: iced::widget::text_editor::Content,
     pub(crate) is_dark: bool,
     pub(crate) language: Language,
+    pub(crate) copied: bool,
+    pub(crate) refresh_index: usize,
 }
 
 impl McScan {
@@ -97,13 +106,17 @@ impl McScan {
             ranges_editor: iced::widget::text_editor::Content::new(),
             is_dark: true,
             language: Language::detect(),
+            copied: false,
+            refresh_index: 0,
         };
         (app, Task::discard(window::latest()).map(Message::WindowInitialized))
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::WindowInitialized(id) => self.wid = id,
+            Message::WindowInitialized(id) => {
+                self.wid = id;
+            }
 
             Message::ScanStart => {
                 let jp = self.settings.java_ports_parsed();
@@ -114,11 +127,11 @@ impl McScan {
                 if self.address_list.values().is_empty() {
                     self.ranges_editor = iced::widget::text_editor::Content::new();
                     self.modal = ModalKind::AddRanges;
-                    return;
+                    return Task::none();
                 }
                 if jp.is_empty() && bp.is_empty() {
                     self.modal = ModalKind::Settings;
-                    return;
+                    return Task::none();
                 }
 
                 self.results.clear();
@@ -147,7 +160,15 @@ impl McScan {
             }
 
             Message::AddressList(msg) => self.address_list.update(msg),
-            Message::ResultsList(_) => {}
+
+            Message::ResultsList(msg) => {
+                match msg {
+                    ResultsListMessage::OpenPreview(addr) => {
+                        self.modal = ModalKind::ServerPreview(addr);
+                        self.copied = false;
+                    }
+                }
+            }
 
             Message::JavaPortsChanged(v) => {
                 self.settings.java_ports_error = false;
@@ -161,7 +182,10 @@ impl McScan {
             Message::TimeoutChanged(v) => self.settings.timeout_ms = v,
 
             Message::OpenModal(kind) => self.modal = kind,
-            Message::CloseModal => self.modal = ModalKind::None,
+            Message::CloseModal => {
+                self.modal = ModalKind::None;
+                self.copied = false;
+            }
 
             Message::RangesEditorAction(action) => self.ranges_editor.perform(action),
 
@@ -175,7 +199,64 @@ impl McScan {
 
             Message::SetTheme(dark) => self.is_dark = dark,
             Message::SetLanguage(lang) => self.language = lang,
+
+            Message::CopyAddress => {
+                if let ModalKind::ServerPreview(addr) = &self.modal {
+                    let s = format!("{}:{}", addr.ip(), addr.port());
+                    self.copied = true;
+                    let (tx, rx) = oneshot::channel::<()>();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(Duration::from_millis(1500));
+                        let _ = tx.send(());
+                    });
+                    return Task::batch([
+                        iced::clipboard::write(s),
+                        Task::perform(
+                            async move { let _ = rx.await; },
+                            |_| Message::CopiedReset,
+                        ),
+                    ]);
+                }
+            }
+
+            Message::CopiedReset => {
+                self.copied = false;
+            }
+
+            Message::RefreshTick => {
+                let count = self.results.count();
+                if count == 0 {
+                    return Task::none();
+                }
+                let idx = self.refresh_index % count;
+                self.refresh_index = self.refresh_index.wrapping_add(1);
+                let addr = self.results.items()[idx].addr;
+                let edition = self.results.items()[idx].edition.clone();
+                let timeout = self.settings.timeout_ms.parse::<u64>().unwrap_or(1500);
+
+                let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
+                std::thread::spawn(move || {
+                    let rt = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .expect("tokio refresh rt");
+                    let result = rt.block_on(crate::scanner::probe_server(addr, edition, timeout));
+                    let _ = tx.send(result);
+                });
+                return Task::perform(
+                    async move { rx.await.ok().flatten() },
+                    Message::ServerRefreshed,
+                );
+            }
+
+            Message::ServerRefreshed(Some(info)) => {
+                self.results.refresh(info);
+            }
+
+            Message::ServerRefreshed(None) => {}
         }
+
+        Task::none()
     }
 
     pub fn tr(&self) -> &'static Tr {
@@ -183,11 +264,20 @@ impl McScan {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        if !self.is_scanning {
-            return Subscription::none();
-        }
-        let config = Arc::new(self.scan_config());
-        Subscription::run_with((self.scan_id, config), build_scan_stream)
+        let scan_sub = if self.is_scanning {
+            let config = Arc::new(self.scan_config());
+            Subscription::run_with((self.scan_id, config), build_scan_stream)
+        } else {
+            Subscription::none()
+        };
+
+        let refresh_sub = if self.results.count() > 0 {
+            Subscription::run_with(42u8, refresh_timer_stream)
+        } else {
+            Subscription::none()
+        };
+
+        Subscription::batch([scan_sub, refresh_sub])
     }
 
     pub fn theme(&self) -> Theme {
@@ -197,7 +287,7 @@ impl McScan {
     pub fn view(&self) -> Element<'_, Message> {
         use iced::widget::{container, row, Space, Stack};
         use iced::{Fill, Length::Fixed};
-        use crate::components::{left_panel, right_panel};
+        use crate::components::{left_panel, right_panel, results_list};
         use crate::styles::{c, is_dark};
 
         let sep = container(Space::new())
@@ -226,6 +316,7 @@ impl McScan {
             ModalKind::None      => base,
             ModalKind::Settings  => Stack::new().push(base).push(settings::render(self)).into(),
             ModalKind::AddRanges => Stack::new().push(base).push(address_list::add_dialog::render(self)).into(),
+            ModalKind::ServerPreview(_) => Stack::new().push(base).push(results_list::preview_dialog::render(self)).into(),
         }
     }
 
@@ -246,6 +337,25 @@ fn app_bg_style(t: &iced::Theme) -> iced::widget::container::Style {
         background: Some(iced::Background::Color(if is_dark(t) { c("#0E1116") } else { c("#F0F1F3") })),
         ..Default::default()
     }
+}
+
+fn refresh_timer_stream(_: &u8) -> BoxStream<'static, Message> {
+    let (tx, rx) = mpsc::unbounded();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .expect("tokio timer runtime");
+        rt.block_on(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(30)).await;
+                if tx.unbounded_send(Message::RefreshTick).is_err() {
+                    break;
+                }
+            }
+        });
+    });
+    Box::pin(rx)
 }
 
 fn build_scan_stream(data: &(u64, Arc<ScanConfig>)) -> BoxStream<'static, Message> {

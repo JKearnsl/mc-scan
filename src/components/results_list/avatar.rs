@@ -1,7 +1,7 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::{container, text, Stack};
 use iced::Length::Fixed;
-use iced::{gradient, Background, Border, Color, Element, Shadow, Theme};
+use iced::{gradient, Background, Border, Color, Element, Theme};
 
 use crate::scanner::types::Edition;
 use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS_SEMIBOLD};
@@ -20,7 +20,7 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
             .font(SANS_SEMIBOLD)
             .style(move |_: &Theme| text::Style { color: Some(letter_color) }),
     )
-    .style(move |t: &Theme| ContainerStyle {
+    .style(move |_: &Theme| ContainerStyle {
         background: Some(Background::Gradient(
             gradient::Linear::new(angle)
                 .add_stop(0.0, grad_start)

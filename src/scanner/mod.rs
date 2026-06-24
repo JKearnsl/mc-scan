@@ -36,6 +36,13 @@ pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = Option<ServerInfo>> +
         .buffer_unordered(concurrency)
 }
 
+pub async fn probe_server(addr: std::net::SocketAddr, edition: types::Edition, timeout_ms: u64) -> Option<types::ServerInfo> {
+    match edition {
+        types::Edition::Java => java::probe(addr, timeout_ms).await,
+        types::Edition::Bedrock => bedrock::probe(addr, timeout_ms).await,
+    }
+}
+
 pub(super) fn strip_section_codes(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
