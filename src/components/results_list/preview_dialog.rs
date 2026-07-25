@@ -8,6 +8,7 @@ use iced::{
 };
 use crate::components::ui::{btn, scrollbar as styled_scroll, BtnVariant};
 
+use super::avatar::{build_avatar, AvatarSize};
 use crate::app::{McScan, Message, ModalKind};
 use crate::scanner::types::Edition;
 use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
@@ -35,7 +36,9 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let copy_label = if app.copied { tr.copied } else { tr.copy };
     let server_name = motd_first_line(&server.motd);
 
-    let avatar = build_avatar_large(&server_name, &server.edition);
+    let avatar = build_avatar(&server_name, &server.edition, AvatarSize::LARGE, |t: &Theme| {
+        if is_dark(t) { c("#181C21") } else { c("#FFFFFF") }
+    });
 
     let online_dot = container(Space::new())
         .width(Fixed(7.0))
@@ -189,30 +192,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         None
     };
 
-    let bottom = container(
-        row![
-            button(container(
-                text(copy_label).size(14).font(SANS_SEMIBOLD)
-                    .style(|t: &Theme| text::Style {
-                        color: Some(if is_dark(t) { c("#08110B") } else { c("#FFFFFF") }),
-                    })
-            ).center(Fill))
-            .on_press(Message::CopyAddress)
-            .style(primary_btn_style)
-            .width(Fill)
-            .height(Fixed(44.0)),
-            Space::new().width(11),
-            button(container(
-                text(tr.done).size(14).font(SANS_SEMIBOLD)
-            ).center(Fill))
-            .on_press(Message::CloseModal)
-            .style(secondary_btn_style)
-            .width(Fill)
-            .height(Fixed(44.0)),
-        ]
-        .width(Fill),
-    )
-    .padding(Padding { top: 8.0, right: 22.0, bottom: 20.0, left: 22.0 });
+
 
     let mut body = column![
         header,
@@ -227,7 +207,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     if let Some(s) = samples_block {
         body = body.push(s);
     }
-    body = body.push(bottom);
+
 
     let dialog = container(
         styled_scroll(body),
@@ -339,92 +319,6 @@ fn player_chip(name: &str) -> Element<'_, Message> {
 }
 
 
-fn build_avatar_large<'a>(name: &str, edition: &Edition) -> Element<'a, Message> {
-    use iced::gradient;
-    use iced::widget::Stack;
-
-    let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('?')
-        .to_uppercase().next().unwrap_or('?');
-
-    let name_first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('A') as u32;
-    let idx = ((name_first.wrapping_mul(2654435769)) >> 28) as usize;
-
-    const PALETTES: &[(u32, u32, u32)] = &[
-        (0x214a3a, 0x16302a, 0x3DD68C), (0x33405c, 0x222a3d, 0x8FB3FF),
-        (0x4a3a28, 0x2f2418, 0xE0B27A), (0x3d2a4a, 0x2a1d35, 0xC07AE0),
-        (0x4a2828, 0x301818, 0xE07A7A), (0x1a3a4a, 0x11252f, 0x7AD4E0),
-        (0x2d3d1a, 0x1d2811, 0xA3D97A), (0x4a3828, 0x302415, 0xE0C07A),
-        (0x28384a, 0x18242f, 0x7AB8E0), (0x3a2a3a, 0x251825, 0xE07AC0),
-        (0x1a3a3a, 0x112525, 0x7AE0D4), (0x3a3a1a, 0x252511, 0xD4E07A),
-        (0x3a1a1a, 0x251111, 0xE08C7A), (0x1a2a3a, 0x111a25, 0x7AAEE0),
-        (0x2a3a2a, 0x182518, 0x9AE09A), (0x3a2a1a, 0x251a0f, 0xE0B07A),
-    ];
-    let (gs, ge, lc) = PALETTES[idx % PALETTES.len()];
-    let grad_s = hex_to_color(gs);
-    let grad_e = hex_to_color(ge);
-    let letter_c = hex_to_color(lc);
-
-    let letter_bg = container(
-        text(first.to_string())
-            .size(27)
-            .font(crate::styles::SANS_SEMIBOLD)
-            .style(move |_: &Theme| text::Style { color: Some(letter_c) }),
-    )
-    .style(move |_: &Theme| ContainerStyle {
-        background: Some(Background::Gradient(
-            gradient::Linear::new(std::f32::consts::PI * 0.75)
-                .add_stop(0.0, grad_s)
-                .add_stop(1.0, grad_e)
-                .into(),
-        )),
-        border: Border { radius: 14.0.into(), ..Default::default() },
-        ..Default::default()
-    })
-    .center(Fixed(68.0));
-
-    let (badge_bg, badge_fg, badge_ch) = match edition {
-        Edition::Java    => (c("#D99A3C"), c("#1A0E00"), "J"),
-        Edition::Bedrock => (c("#13A884"), c("#001A14"), "B"),
-    };
-
-    let badge = container(
-        container(
-            text(badge_ch)
-                .size(11)
-                .font(crate::styles::MONO_SEMIBOLD)
-                .style(move |_: &Theme| text::Style { color: Some(badge_fg) }),
-        )
-        .style(move |t: &Theme| ContainerStyle {
-            background: Some(Background::Color(badge_bg)),
-            border: Border {
-                color: if is_dark(t) { c("#181C21") } else { c("#FFFFFF") },
-                width: 2.5,
-                radius: 6.0.into(),
-            },
-            ..Default::default()
-        })
-        .center(Fixed(22.0)),
-    )
-    .width(Fixed(72.0))
-    .height(Fixed(72.0))
-    .align_right(Fixed(72.0))
-    .align_bottom(Fixed(72.0));
-
-    let bg_layer = container(letter_bg)
-        .width(Fixed(68.0))
-        .height(Fixed(68.0))
-        .align_x(iced::alignment::Horizontal::Left)
-        .align_y(iced::alignment::Vertical::Top);
-
-    Stack::new()
-        .push(bg_layer)
-        .push(badge)
-        .width(Fixed(72.0))
-        .height(Fixed(72.0))
-        .into()
-}
-
-
 fn labeled_section<'a>(label: &'a str, content: Element<'a, Message>) -> Element<'a, Message> {
     container(
         column![
@@ -515,15 +409,6 @@ fn ping_color(ms: u64) -> Color {
     if ms < 80 { c("#3DD68C") } else if ms <= 200 { c("#E0B23C") } else { c("#E5604D") }
 }
 
-fn hex_to_color(hex: u32) -> Color {
-    Color {
-        r: ((hex >> 16) & 0xFF) as f32 / 255.0,
-        g: ((hex >> 8) & 0xFF) as f32 / 255.0,
-        b: (hex & 0xFF) as f32 / 255.0,
-        a: 1.0,
-    }
-}
-
 fn acc_green(t: &Theme) -> Color {
     if is_dark(t) { c("#3DD68C") } else { c("#18A862") }
 }
@@ -582,45 +467,6 @@ fn copy_btn_style(t: &Theme, status: button::Status) -> button::Style {
         background: Some(Background::Color(Color { r, g, b, a: bg_a })),
         text_color: if dark { c("#3DD68C") } else { c("#18A862") },
         border: Border { color: Color { r, g, b, a: 0.35 }, width: 1.0, radius: 9.0.into() },
-        shadow: Shadow::default(),
-        snap: false,
-    }
-}
-
-fn primary_btn_style(t: &Theme, status: button::Status) -> button::Style {
-    let dark = is_dark(t);
-    let accent     = if dark { c("#3DD68C") } else { c("#18A862") };
-    let accent_hov = if dark { c("#34C27E") } else { c("#138A52") };
-    let accent_prs = if dark { c("#2BAD6F") } else { c("#0F7040") };
-    let bg = match status {
-        button::Status::Hovered => accent_hov,
-        button::Status::Pressed => accent_prs,
-        _ => accent,
-    };
-    button::Style {
-        background: Some(Background::Color(bg)),
-        text_color: if dark { c("#08110B") } else { c("#FFFFFF") },
-        border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 10.0.into() },
-        shadow: Shadow::default(),
-        snap: false,
-    }
-}
-
-fn secondary_btn_style(t: &Theme, status: button::Status) -> button::Style {
-    let dark = is_dark(t);
-    let bg = match status {
-        button::Status::Hovered => if dark { c("#1E2530") } else { c("#F2F4F7") },
-        button::Status::Pressed => if dark { c("#262E3C") } else { c("#E8ECF0") },
-        _ => if dark { c("#131821") } else { c("#FFFFFF") },
-    };
-    button::Style {
-        background: Some(Background::Color(bg)),
-        text_color: if dark { c("#E8EBF0") } else { c("#161A20") },
-        border: Border {
-            color: if dark { c("#2A3240") } else { c("#DDE2E8") },
-            width: 1.0,
-            radius: 10.0.into(),
-        },
         shadow: Shadow::default(),
         snap: false,
     }

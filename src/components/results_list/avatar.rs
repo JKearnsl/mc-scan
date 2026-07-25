@@ -4,11 +4,54 @@ use iced::Length::Fixed;
 use iced::{gradient, Background, Border, Color, Element, Theme};
 
 use crate::scanner::types::Edition;
-use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS_SEMIBOLD};
+use crate::styles::{c, MONO_SEMIBOLD, SANS_SEMIBOLD};
 
-use super::ResultsListMessage;
+/// Dimensions for a `build_avatar` instance. `SMALL` is used in the results list,
+/// `LARGE` in the server preview dialog.
+#[derive(Clone, Copy)]
+pub struct AvatarSize {
+    pub outer: f32,
+    pub inner: f32,
+    pub letter_font: f32,
+    pub letter_radius: f32,
+    pub badge_size: f32,
+    pub badge_border: f32,
+    pub badge_radius: f32,
+    pub badge_font: f32,
+}
 
-pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsListMessage> {
+impl AvatarSize {
+    pub const SMALL: AvatarSize = AvatarSize {
+        outer: 56.0,
+        inner: 52.0,
+        letter_font: 22.0,
+        letter_radius: 8.0,
+        badge_size: 18.0,
+        badge_border: 2.0,
+        badge_radius: 5.0,
+        badge_font: 9.0,
+    };
+
+    pub const LARGE: AvatarSize = AvatarSize {
+        outer: 72.0,
+        inner: 68.0,
+        letter_font: 27.0,
+        letter_radius: 14.0,
+        badge_size: 22.0,
+        badge_border: 2.5,
+        badge_radius: 6.0,
+        badge_font: 11.0,
+    };
+}
+
+/// `ring` computes the badge's outer border color per theme; it should match the
+/// background the avatar is placed on, so the badge reads as a cutout.
+pub fn build_avatar<'a, M: 'a>(
+    name: &str,
+    edition: &Edition,
+    size: AvatarSize,
+    ring: impl Fn(&Theme) -> Color + 'a,
+) -> Element<'a, M> {
     let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('?')
         .to_uppercase().next().unwrap_or('?');
     let (grad_start, grad_end, letter_color) = palette(name);
@@ -16,7 +59,7 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
 
     let letter_bg = container(
         text(first.to_string())
-            .size(22)
+            .size(size.letter_font)
             .font(SANS_SEMIBOLD)
             .style(move |_: &Theme| text::Style { color: Some(letter_color) }),
     )
@@ -30,11 +73,11 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
         border: Border {
             color: Color::TRANSPARENT,
             width: 1.0,
-            radius: 8.0.into(),
+            radius: size.letter_radius.into(),
         },
         ..Default::default()
     })
-    .center(Fixed(52.0));
+    .center(Fixed(size.inner));
 
     let (badge_bg, badge_text_col, badge_letter) = match edition {
         Edition::Java    => (c("#D99A3C"), c("#08110B"), "J"),
@@ -44,37 +87,37 @@ pub fn build_avatar<'a>(name: &str, edition: &Edition) -> Element<'a, ResultsLis
     let badge_inner = container(
         container(
             text(badge_letter)
-                .size(9)
+                .size(size.badge_font)
                 .font(MONO_SEMIBOLD)
                 .style(move |_: &Theme| text::Style { color: Some(badge_text_col) }),
         )
         .style(move |t: &Theme| ContainerStyle {
             background: Some(Background::Color(badge_bg)),
             border: Border {
-                color: if is_dark(t) { c("#181D25") } else { c("#FFFFFF") },
-                width: 2.0,
-                radius: 5.0.into(),
+                color: ring(t),
+                width: size.badge_border,
+                radius: size.badge_radius.into(),
             },
             ..Default::default()
         })
-        .center(Fixed(18.0)),
+        .center(Fixed(size.badge_size)),
     )
-    .width(Fixed(56.0))
-    .height(Fixed(56.0))
-    .align_right(Fixed(56.0))
-    .align_bottom(Fixed(56.0));
+    .width(Fixed(size.outer))
+    .height(Fixed(size.outer))
+    .align_right(Fixed(size.outer))
+    .align_bottom(Fixed(size.outer));
 
     let avatar_layer = container(letter_bg)
-        .width(Fixed(56.0))
-        .height(Fixed(56.0))
+        .width(Fixed(size.outer))
+        .height(Fixed(size.outer))
         .align_x(iced::alignment::Horizontal::Left)
         .align_y(iced::alignment::Vertical::Top);
 
     Stack::new()
         .push(avatar_layer)
         .push(badge_inner)
-        .width(Fixed(56.0))
-        .height(Fixed(56.0))
+        .width(Fixed(size.outer))
+        .height(Fixed(size.outer))
         .into()
 }
 
@@ -101,15 +144,15 @@ fn palette(name: &str) -> (Color, Color, Color) {
         (0x3a2a1a, 0x251a0f, 0xE0B07A),
     ];
 
-    let (gs, ge, lc) = PALETTES[idx % PALETTES.len()];
-    (from_hex(gs), from_hex(ge), from_hex(lc))
-}
+    const HEX_TO_COLOR: fn(u32) -> Color = |hex: u32| -> Color {
+        Color {
+            r: ((hex >> 16) & 0xFF) as f32 / 255.0,
+            g: ((hex >> 8) & 0xFF) as f32 / 255.0,
+            b: (hex & 0xFF) as f32 / 255.0,
+            a: 1.0,
+        }
+    };
 
-fn from_hex(hex: u32) -> Color {
-    Color {
-        r: ((hex >> 16) & 0xFF) as f32 / 255.0,
-        g: ((hex >> 8) & 0xFF) as f32 / 255.0,
-        b: (hex & 0xFF) as f32 / 255.0,
-        a: 1.0,
-    }
+    let (gs, ge, lc) = PALETTES[idx % PALETTES.len()];
+    (HEX_TO_COLOR(gs), HEX_TO_COLOR(ge), HEX_TO_COLOR(lc))
 }

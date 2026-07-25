@@ -13,7 +13,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         return button(
             container(
                 text(tr.stop).size(16).font(SANS_SEMIBOLD)
-                    .style(|_: &Theme| iced::widget::text::Style { color: Some(c("#FFFFFF")) }),
+                    .style(|_: &Theme| text::Style { color: Some(c("#FFFFFF")) }),
             )
             .center(Fill),
         )
@@ -28,7 +28,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let btn = button(
         container(
             text(tr.scan).size(16).font(SANS_SEMIBOLD)
-                .style(move |t: &Theme| iced::widget::text::Style {
+                .style(move |t: &Theme| text::Style {
                     color: Some(if can_scan {
                         if is_dark(t) { c("#08110B") } else { c("#FFFFFF") }
                     } else {
