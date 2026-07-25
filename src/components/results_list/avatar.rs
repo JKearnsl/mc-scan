@@ -4,10 +4,11 @@ use iced::Length::Fixed;
 use iced::{gradient, Background, Border, Color, Element, Theme};
 
 use crate::scanner::types::Edition;
-use crate::styles::{c, MONO_SEMIBOLD, SANS_SEMIBOLD};
+use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS_SEMIBOLD};
 
-/// Dimensions for a `build_avatar` instance. `SMALL` is used in the results list,
-/// `LARGE` in the server preview dialog.
+/// Dimensions for a `build_avatar` instance.
+/// - `SMALL` is used in the results list,
+/// - `LARGE` in the server preview dialog.
 #[derive(Clone, Copy)]
 pub struct AvatarSize {
     pub outer: f32,
@@ -44,8 +45,7 @@ impl AvatarSize {
     };
 }
 
-/// `ring` computes the badge's outer border color per theme; it should match the
-/// background the avatar is placed on, so the badge reads as a cutout.
+
 pub fn build_avatar<'a, M: 'a>(
     name: &str,
     edition: &Edition,
@@ -54,28 +54,39 @@ pub fn build_avatar<'a, M: 'a>(
 ) -> Element<'a, M> {
     let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('?')
         .to_uppercase().next().unwrap_or('?');
-    let (grad_start, grad_end, letter_color) = palette(name);
+
+    let (dark_start, dark_end, dark_letter) = palette(name);
+    let (light_start, light_end, light_letter) = light_variant(dark_letter);
     let angle = std::f32::consts::PI * 0.75;
 
     let letter_bg = container(
         text(first.to_string())
             .size(size.letter_font)
             .font(SANS_SEMIBOLD)
-            .style(move |_: &Theme| text::Style { color: Some(letter_color) }),
+            .style(move |t: &Theme| text::Style {
+                color: Some(if is_dark(t) { dark_letter } else { light_letter }),
+            }),
     )
-    .style(move |_: &Theme| ContainerStyle {
-        background: Some(Background::Gradient(
-            gradient::Linear::new(angle)
-                .add_stop(0.0, grad_start)
-                .add_stop(1.0, grad_end)
-                .into(),
-        )),
-        border: Border {
-            color: Color::TRANSPARENT,
-            width: 1.0,
-            radius: size.letter_radius.into(),
-        },
-        ..Default::default()
+    .style(move |t: &Theme| {
+        let (gs, ge) = if is_dark(t) {
+            (dark_start, dark_end)
+        } else {
+            (light_start, light_end)
+        };
+        ContainerStyle {
+            background: Some(Background::Gradient(
+                gradient::Linear::new(angle)
+                    .add_stop(0.0, gs)
+                    .add_stop(1.0, ge)
+                    .into(),
+            )),
+            border: Border {
+                color: Color::TRANSPARENT,
+                width: 1.0,
+                radius: size.letter_radius.into(),
+            },
+            ..Default::default()
+        }
     })
     .center(Fixed(size.inner));
 
@@ -155,4 +166,52 @@ fn palette(name: &str) -> (Color, Color, Color) {
 
     let (gs, ge, lc) = PALETTES[idx % PALETTES.len()];
     (HEX_TO_COLOR(gs), HEX_TO_COLOR(ge), HEX_TO_COLOR(lc))
+}
+
+
+fn light_variant(dark_letter: Color) -> (Color, Color, Color) {
+    let (h, s, _) = rgb_to_hsl(dark_letter);
+    let bg_s = (s * 0.85).min(1.0);
+    let bg_start = hsl_to_color(h, bg_s, 0.91);
+    let bg_end = hsl_to_color(h, bg_s, 0.83);
+    let letter = hsl_to_color(h, s.min(0.8), 0.37);
+    (bg_start, bg_end, letter)
+}
+
+/// sRGB -> HSL, with hue in turns (0..1).
+fn rgb_to_hsl(c: Color) -> (f32, f32, f32) {
+    let (r, g, b) = (c.r, c.g, c.b);
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let l = (max + min) / 2.0;
+    let d = max - min;
+    if d < 1e-6 {
+        return (0.0, 0.0, l);
+    }
+    let s = d / (1.0 - (2.0 * l - 1.0).abs());
+    let h = if max == r {
+        ((g - b) / d).rem_euclid(6.0)
+    } else if max == g {
+        (b - r) / d + 2.0
+    } else {
+        (r - g) / d + 4.0
+    };
+    (h / 6.0, s, l)
+}
+
+/// HSL (hue in turns) -> sRGB.
+fn hsl_to_color(h: f32, s: f32, l: f32) -> Color {
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let hp = (h * 6.0).rem_euclid(6.0);
+    let x = c * (1.0 - ((hp % 2.0) - 1.0).abs());
+    let (r, g, b) = match hp as u32 {
+        0 => (c, x, 0.0),
+        1 => (x, c, 0.0),
+        2 => (0.0, c, x),
+        3 => (0.0, x, c),
+        4 => (x, 0.0, c),
+        _ => (c, 0.0, x),
+    };
+    let m = l - c / 2.0;
+    Color { r: r + m, g: g + m, b: b + m, a: 1.0 }
 }
