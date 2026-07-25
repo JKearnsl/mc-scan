@@ -95,23 +95,37 @@ pub fn build_avatar<'a, M: 'a>(
         Edition::Bedrock => (c("#13A884"), c("#04120E"), "B"),
     };
 
+    let badge_fill = container(
+        text(badge_letter)
+            .size(size.badge_font)
+            .font(MONO_SEMIBOLD)
+            .style(move |t: &Theme| text::Style {
+                color: Some(if is_dark(t) { badge_text_col } else { Color::WHITE }),
+            }),
+    )
+    .style(move |_: &Theme| ContainerStyle {
+        background: Some(Background::Color(badge_bg)),
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 0.0,
+            radius: (size.badge_radius - size.badge_border).max(0.0).into(),
+        },
+        ..Default::default()
+    })
+    .center(Fixed(size.badge_size - size.badge_border * 2.0));
+
     let badge_inner = container(
-        container(
-            text(badge_letter)
-                .size(size.badge_font)
-                .font(MONO_SEMIBOLD)
-                .style(move |_: &Theme| text::Style { color: Some(badge_text_col) }),
-        )
-        .style(move |t: &Theme| ContainerStyle {
-            background: Some(Background::Color(badge_bg)),
-            border: Border {
-                color: ring(t),
-                width: size.badge_border,
-                radius: size.badge_radius.into(),
-            },
-            ..Default::default()
-        })
-        .center(Fixed(size.badge_size)),
+        container(badge_fill)
+            .style(move |t: &Theme| ContainerStyle {
+                background: Some(Background::Color(ring(t))),
+                border: Border {
+                    color: Color::TRANSPARENT,
+                    width: 0.0,
+                    radius: size.badge_radius.into(),
+                },
+                ..Default::default()
+            })
+            .center(Fixed(size.badge_size)),
     )
     .width(Fixed(size.outer))
     .height(Fixed(size.outer))
