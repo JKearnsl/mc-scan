@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 iced = { version = "0.14.0", default-features = false, features = [
+    "wgpu",
     "tiny-skia",
     "crisp",
     "web-colors",
@@ -21,3 +22,8 @@ serde_json = "1.0.140"
 ipnet = { version = "2.12.0", features = [] }
 once_cell = "1.21.4"
 sys-locale = "0.3"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

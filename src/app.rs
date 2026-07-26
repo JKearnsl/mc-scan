@@ -35,6 +35,8 @@ pub enum Message {
     BedrockPortsChanged(String),
     ConcurrencyChanged(String),
     TimeoutChanged(String),
+    ToggleQuery(bool),
+    ToggleOnlineModeCheck(bool),
     OpenModal(ModalKind),
     CloseModal,
     RangesEditorAction(iced::widget::text_editor::Action),
@@ -55,6 +57,8 @@ pub struct ScanSettings {
     pub(crate) timeout_ms: String,
     pub(crate) java_ports_error: bool,
     pub(crate) bedrock_ports_error: bool,
+    pub(crate) query_enabled: bool,
+    pub(crate) online_mode_check: bool,
 }
 
 impl Default for ScanSettings {
@@ -66,6 +70,8 @@ impl Default for ScanSettings {
             timeout_ms: "1500".into(),
             java_ports_error: false,
             bedrock_ports_error: false,
+            query_enabled: true,
+            online_mode_check: false,
         }
     }
 }
@@ -167,6 +173,10 @@ impl McScan {
                     ResultsListMessage::OpenPreview(addr) => {
                         self.modal = ModalKind::ServerPreview(addr);
                         self.copied = false;
+                        if let Some(server) = self.results.get_by_addr(addr) {
+                            let edition = server.edition.clone();
+                            return self.spawn_probe(addr, edition);
+                        }
                     }
                 }
             }
@@ -181,6 +191,8 @@ impl McScan {
             }
             Message::ConcurrencyChanged(v) => self.settings.concurrency = v,
             Message::TimeoutChanged(v) => self.settings.timeout_ms = v,
+            Message::ToggleQuery(v) => self.settings.query_enabled = v,
+            Message::ToggleOnlineModeCheck(v) => self.settings.online_mode_check = v,
 
             Message::OpenModal(kind) => self.modal = kind,
             Message::CloseModal => {
@@ -233,21 +245,7 @@ impl McScan {
                 self.refresh_index = self.refresh_index.wrapping_add(1);
                 let addr = self.results.items()[idx].addr;
                 let edition = self.results.items()[idx].edition.clone();
-                let timeout = self.settings.timeout_ms.parse::<u64>().unwrap_or(1500);
-
-                let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
-                std::thread::spawn(move || {
-                    let rt = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .expect("tokio refresh rt");
-                    let result = rt.block_on(crate::scanner::probe_server(addr, edition, timeout));
-                    let _ = tx.send(result);
-                });
-                return Task::perform(
-                    async move { rx.await.ok().flatten() },
-                    Message::ServerRefreshed,
-                );
+                return self.spawn_probe(addr, edition);
             }
 
             Message::ServerRefreshed(Some(info)) => {
@@ -312,15 +310,35 @@ impl McScan {
         )
         .style(app_bg_style)
         .width(Fill)
-        .height(Fill)
-        .into();
+        .height(Fill);
 
-        match &self.modal {
-            ModalKind::None      => base,
-            ModalKind::Settings  => Stack::new().push(base).push(settings::render(self)).into(),
-            ModalKind::AddRanges => Stack::new().push(base).push(address_list::add_dialog::render(self)).into(),
-            ModalKind::ServerPreview(_) => Stack::new().push(base).push(results_list::preview_dialog::render(self)).into(),
-        }
+
+        let mut stack = Stack::new().push(base);
+        stack = match &self.modal {
+            ModalKind::None      => stack,
+            ModalKind::Settings  => stack.push(settings::render(self)),
+            ModalKind::AddRanges => stack.push(address_list::add_dialog::render(self)),
+            ModalKind::ServerPreview(_) => stack.push(results_list::preview_dialog::render(self)),
+        };
+        stack.into()
+    }
+
+    fn spawn_probe(&self, addr: SocketAddr, edition: crate::scanner::types::Edition) -> Task<Message> {
+        let timeout = self.settings.timeout_ms.parse::<u64>().unwrap_or(1500);
+        let query_enabled = self.settings.query_enabled;
+        let online_mode_check = self.settings.online_mode_check;
+        let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("tokio refresh rt");
+            let result = rt.block_on(crate::scanner::probe_server(
+                addr, edition, timeout, query_enabled, online_mode_check,
+            ));
+            let _ = tx.send(result);
+        });
+        Task::perform(async move { rx.await.ok().flatten() }, Message::ServerRefreshed)
     }
 
     fn scan_config(&self) -> ScanConfig {

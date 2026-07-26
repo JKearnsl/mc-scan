@@ -98,7 +98,7 @@ fn range_row(
         text(format_host_count(net_host_count(net)))
             .size(11)
             .font(MONO)
-            .style(|t: &Theme| iced::widget::text::Style {
+            .style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
             }),
         Space::new().width(10),

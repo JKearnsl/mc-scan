@@ -2,6 +2,7 @@ use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
 use iced::widget::{column, container, mouse_area, row, svg, text};
 use iced::Length::Fixed;
+use iced::mouse::Interaction;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
 use crate::components::ui::{btn, BtnVariant};
@@ -42,6 +43,7 @@ pub fn dialog<'a, M: Clone + 'a>(
             }),
     )
     .on_press(on_close)
+    .interaction(Interaction::Idle)
     .into()
 }
 

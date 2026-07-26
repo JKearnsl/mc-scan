@@ -1,9 +1,9 @@
 use iced::widget::space::Space;
 use iced::widget::{column, row};
-use iced::{Element};
+use iced::Element;
 
 use crate::app::{McScan, Message};
-use crate::components::ui::{btn, dialog, labeled_input, section_label, BtnVariant};
+use crate::components::ui::{btn, checkbox, dialog, labeled_input, section_label, BtnVariant};
 use crate::i18n::Language;
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -62,6 +62,12 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         labeled_input(tr.threads,    &app.settings.concurrency,    "1024",  Message::ConcurrencyChanged,  false),
         Space::new().height(6),
         labeled_input(tr.timeout_ms, &app.settings.timeout_ms,     "1500",  Message::TimeoutChanged,      false),
+        Space::new().height(16),
+        section_label(tr.enrichment),
+        Space::new().height(8),
+        checkbox(tr.query_label, app.settings.query_enabled, Message::ToggleQuery),
+        Space::new().height(8),
+        checkbox(tr.online_mode_label, app.settings.online_mode_check, Message::ToggleOnlineModeCheck),
         Space::new().height(20),
         btn(BtnVariant::Primary(tr.done), Message::CloseModal),
     ];

@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=MC Scan
+Comment=Minecraft server scanner
+Comment[ru]=Сканер серверов Minecraft
+Comment[zh]=Minecraft 服务器扫描器
+Comment[ja]=Minecraft サーバースキャナー
+Exec=mc-scan
+Icon=mc-scan
+Terminal=false
+Categories=Network;
+Keywords=minecraft;scan;server;network;
+StartupNotify=true
+StartupWMClass=mc-scan

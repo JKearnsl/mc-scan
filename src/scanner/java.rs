@@ -4,7 +4,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use serde_json::Value;
-use super::types::{Edition, ServerInfo};
+use super::types::{Edition, ModInfo, ServerInfo};
 
 pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
     let dur = Duration::from_millis(timeout_ms);
@@ -19,18 +19,22 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
     let json: Value = timeout(dur, read_response(&mut stream)).await.ok()??;
     let latency_ms = start.elapsed().as_millis() as u64;
 
-    Some(ServerInfo {
-        addr,
-        edition: Edition::Java,
-        motd: parse_description(&json["description"]),
-        version: json["version"]["name"].as_str().unwrap_or("").to_string(),
-        protocol: json["version"]["protocol"].as_i64().unwrap_or(0) as i32,
-        online: json["players"]["online"].as_u64().unwrap_or(0) as u32,
-        max_players: json["players"]["max"].as_u64().unwrap_or(0) as u32,
-        latency_ms,
-        samples: parse_samples(&json["players"]["sample"]),
-        ping_history: vec![latency_ms],
-    })
+    let (samples, sample_ids) = parse_samples(&json["players"]["sample"]);
+
+    let mut info = ServerInfo::base(addr, Edition::Java);
+    info.motd = parse_description(&json["description"]);
+    info.version = json["version"]["name"].as_str().unwrap_or("").to_string();
+    info.protocol = json["version"]["protocol"].as_i64().unwrap_or(0) as i32;
+    info.online = json["players"]["online"].as_u64().unwrap_or(0) as u32;
+    info.max_players = json["players"]["max"].as_u64().unwrap_or(0) as u32;
+    info.latency_ms = latency_ms;
+    info.samples = samples;
+    info.sample_ids = sample_ids;
+    info.ping_history = vec![latency_ms];
+    info.favicon = json["favicon"].as_str().map(|s| s.to_string());
+    info.secure_chat = json["enforcesSecureChat"].as_bool();
+    info.mods = parse_mods(&json);
+    Some(info)
 }
 
 fn build_handshake(host: &str, port: u16) -> Vec<u8> {
@@ -92,14 +96,46 @@ fn write_string(buf: &mut Vec<u8>, s: &str) {
     buf.extend_from_slice(bytes);
 }
 
-fn parse_samples(v: &Value) -> Vec<String> {
-    v.as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|p| p["name"].as_str().map(|s| s.to_string()))
-                .collect()
-        })
-        .unwrap_or_default()
+fn parse_samples(v: &Value) -> (Vec<String>, Vec<String>) {
+    let mut names = Vec::new();
+    let mut ids = Vec::new();
+    if let Some(arr) = v.as_array() {
+        for p in arr {
+            if let Some(name) = p["name"].as_str() {
+                names.push(name.to_string());
+                ids.push(p["id"].as_str().unwrap_or("").to_string());
+            }
+        }
+    }
+    (names, ids)
+}
+
+/// Mods list from `forgeData.mods[]` (FML2/NeoForge) or `modinfo.modList[]` (old FML).
+fn parse_mods(json: &Value) -> Vec<ModInfo> {
+    if let Some(arr) = json["forgeData"]["mods"].as_array() {
+        return arr
+            .iter()
+            .filter_map(|m| {
+                let id = m["modId"].as_str()?;
+                let version = m["modmarker"]
+                    .as_str()
+                    .or_else(|| m["version"].as_str())
+                    .unwrap_or("");
+                Some(ModInfo { id: id.to_string(), version: version.to_string() })
+            })
+            .collect();
+    }
+    if let Some(arr) = json["modinfo"]["modList"].as_array() {
+        return arr
+            .iter()
+            .filter_map(|m| {
+                let id = m["modid"].as_str()?;
+                let version = m["version"].as_str().unwrap_or("");
+                Some(ModInfo { id: id.to_string(), version: version.to_string() })
+            })
+            .collect();
+    }
+    Vec::new()
 }
 
 fn parse_description(v: &Value) -> String {

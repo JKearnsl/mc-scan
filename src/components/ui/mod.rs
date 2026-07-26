@@ -4,6 +4,7 @@ mod dialog;
 mod input;
 mod scrollbar;
 mod textarea;
+mod checkbox;
 
 pub use badge::{chip, status};
 pub use button::{btn, button_danger, button_primary, BtnVariant};
@@ -11,6 +12,7 @@ pub use dialog::dialog;
 pub use input::labeled_input;
 pub use scrollbar::scrollbar;
 pub use textarea::textarea;
+pub use checkbox::checkbox;
 
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::{container, Space};

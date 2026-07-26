@@ -61,6 +61,19 @@ pub struct Tr {
     pub latency: &'static str,
     pub java_edition: &'static str,
     pub bedrock_edition: &'static str,
+    pub mods: &'static str,
+    pub gamemode: &'static str,
+    pub secure_chat: &'static str,
+    pub enabled: &'static str,
+    pub disabled: &'static str,
+    pub world: &'static str,
+    pub plugins: &'static str,
+    pub enrichment: &'static str,
+    pub query_label: &'static str,
+    pub online_mode_label: &'static str,
+    pub online_mode: &'static str,
+    pub online_yes: &'static str,
+    pub online_no: &'static str,
 }
 
 pub static EN: Tr = Tr {
@@ -101,6 +114,19 @@ pub static EN: Tr = Tr {
     latency: "PING HISTORY",
     java_edition: "Java Edition",
     bedrock_edition: "Bedrock",
+    mods: "MODS",
+    gamemode: "GAMEMODE",
+    secure_chat: "SECURE CHAT",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    world: "WORLD",
+    plugins: "PLUGINS",
+    enrichment: "ADDITIONALLY",
+    query_label: "Query (world/plugins/players)",
+    online_mode_label: "Detect online-mode",
+    online_mode: "ONLINE-MODE",
+    online_yes: "Online",
+    online_no: "Cracked",
 };
 
 pub static RU: Tr = Tr {
@@ -141,6 +167,19 @@ pub static RU: Tr = Tr {
     latency: "ИСТОРИЯ ПИНГА",
     java_edition: "Java Edition",
     bedrock_edition: "Bedrock",
+    mods: "МОДЫ",
+    gamemode: "РЕЖИМ",
+    secure_chat: "БЕЗОПАСНЫЙ ЧАТ",
+    enabled: "Включён",
+    disabled: "Выключен",
+    world: "МИР",
+    plugins: "ПЛАГИНЫ",
+    enrichment: "ДОПОЛНИТЕЛЬНО",
+    query_label: "Query (мир/плагины/игроки)",
+    online_mode_label: "Определять online-mode",
+    online_mode: "ONLINE-MODE",
+    online_yes: "Online",
+    online_no: "Cracked",
 };
 
 pub static ZH: Tr = Tr {
@@ -181,6 +220,19 @@ pub static ZH: Tr = Tr {
     latency: "延迟历史",
     java_edition: "Java 版",
     bedrock_edition: "基岩版",
+    mods: "模组",
+    gamemode: "游戏模式",
+    secure_chat: "安全聊天",
+    enabled: "已启用",
+    disabled: "已禁用",
+    world: "世界",
+    plugins: "插件",
+    enrichment: "此外",
+    query_label: "Query（世界/插件/玩家）",
+    online_mode_label: "检测 online-mode",
+    online_mode: "ONLINE-MODE",
+    online_yes: "正版",
+    online_no: "离线",
 };
 
 pub static JA: Tr = Tr {
@@ -221,6 +273,19 @@ pub static JA: Tr = Tr {
     latency: "ピング履歴",
     java_edition: "Java Edition",
     bedrock_edition: "Bedrock",
+    mods: "MOD",
+    gamemode: "ゲームモード",
+    secure_chat: "セキュアチャット",
+    enabled: "有効",
+    disabled: "無効",
+    world: "ワールド",
+    plugins: "プラグイン",
+    enrichment: "さらに",
+    query_label: "Query（ワールド/プラグイン/プレイヤー）",
+    online_mode_label: "online-mode を判定",
+    online_mode: "ONLINE-MODE",
+    online_yes: "正規",
+    online_no: "非正規",
 };
 
 pub fn tr(lang: Language) -> &'static Tr {

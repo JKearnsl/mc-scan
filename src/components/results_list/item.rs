@@ -1,5 +1,5 @@
 use iced::widget::space::Space;
-use iced::widget::{column, row, text};
+use iced::widget::{column, image, row, text};
 use iced::Length::Fixed;
 use iced::{Alignment, Color, Element, Fill, Theme};
 
@@ -8,12 +8,12 @@ use crate::i18n::Tr;
 use crate::scanner::types::ServerInfo;
 use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
 
-use super::avatar::{build_avatar, AvatarSize};
+use super::avatar::{build_avatar_icon, AvatarSize};
 use super::ResultsListMessage;
 
-pub fn server_card_content<'a>(info: &'a ServerInfo, tr: &'static Tr) -> Element<'a, ResultsListMessage> {
+pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Handle>, tr: &'static Tr) -> Element<'a, ResultsListMessage> {
     let (name, description) = split_motd(&info.motd);
-    let avatar = build_avatar(&name, &info.edition, AvatarSize::SMALL, |t: &Theme| {
+    let avatar = build_avatar_icon(&name, &info.edition, favicon, AvatarSize::SMALL, |t: &Theme| {
         if is_dark(t) { c("#181D25") } else { c("#FFFFFF") }
     });
     let ip_port = format!("{}:{}", info.addr.ip(), info.addr.port());

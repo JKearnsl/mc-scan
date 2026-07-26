@@ -1,7 +1,8 @@
+use base64::Engine;
 use iced::widget::container::Style as ContainerStyle;
-use iced::widget::{container, text, Stack};
+use iced::widget::{container, image, text, Stack};
 use iced::Length::Fixed;
-use iced::{gradient, Background, Border, Color, Element, Theme};
+use iced::{gradient, Background, Border, Color, ContentFit, Element, Theme};
 
 use crate::scanner::types::Edition;
 use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS_SEMIBOLD};
@@ -46,9 +47,10 @@ impl AvatarSize {
 }
 
 
-pub fn build_avatar<'a, M: 'a>(
+pub fn build_avatar_icon<'a, M: 'a>(
     name: &str,
     edition: &Edition,
+    favicon: Option<image::Handle>,
     size: AvatarSize,
     ring: impl Fn(&Theme) -> Color + 'a,
 ) -> Element<'a, M> {
@@ -59,36 +61,56 @@ pub fn build_avatar<'a, M: 'a>(
     let (light_start, light_end, light_letter) = light_variant(dark_letter);
     let angle = std::f32::consts::PI * 0.75;
 
-    let letter_bg = container(
-        text(first.to_string())
-            .size(size.letter_font)
-            .font(SANS_SEMIBOLD)
-            .style(move |t: &Theme| text::Style {
-                color: Some(if is_dark(t) { dark_letter } else { light_letter }),
-            }),
-    )
-    .style(move |t: &Theme| {
-        let (gs, ge) = if is_dark(t) {
-            (dark_start, dark_end)
-        } else {
-            (light_start, light_end)
-        };
-        ContainerStyle {
-            background: Some(Background::Gradient(
-                gradient::Linear::new(angle)
-                    .add_stop(0.0, gs)
-                    .add_stop(1.0, ge)
-                    .into(),
-            )),
+    let base_layer: Element<'a, M> = if let Some(handle) = favicon {
+        container(
+            image(handle)
+                .content_fit(ContentFit::Contain)
+                .width(Fixed(size.inner))
+                .height(Fixed(size.inner)),
+        )
+        .style(move |t: &Theme| ContainerStyle {
             border: Border {
-                color: Color::TRANSPARENT,
+                color: if is_dark(t) { c("#2A3240") } else { c("#DDE2E8") },
                 width: 1.0,
                 radius: size.letter_radius.into(),
             },
             ..Default::default()
-        }
-    })
-    .center(Fixed(size.inner));
+        })
+        .center(Fixed(size.inner))
+        .into()
+    } else {
+        container(
+            text(first.to_string())
+                .size(size.letter_font)
+                .font(SANS_SEMIBOLD)
+                .style(move |t: &Theme| text::Style {
+                    color: Some(if is_dark(t) { dark_letter } else { light_letter }),
+                }),
+        )
+        .style(move |t: &Theme| {
+            let (gs, ge) = if is_dark(t) {
+                (dark_start, dark_end)
+            } else {
+                (light_start, light_end)
+            };
+            ContainerStyle {
+                background: Some(Background::Gradient(
+                    gradient::Linear::new(angle)
+                        .add_stop(0.0, gs)
+                        .add_stop(1.0, ge)
+                        .into(),
+                )),
+                border: Border {
+                    color: Color::TRANSPARENT,
+                    width: 1.0,
+                    radius: size.letter_radius.into(),
+                },
+                ..Default::default()
+            }
+        })
+        .center(Fixed(size.inner))
+        .into()
+    };
 
     let (badge_bg, badge_text_col, badge_letter) = match edition {
         Edition::Java    => (c("#D99A3C"), c("#08110B"), "J"),
@@ -132,7 +154,7 @@ pub fn build_avatar<'a, M: 'a>(
     .align_right(Fixed(size.outer))
     .align_bottom(Fixed(size.outer));
 
-    let avatar_layer = container(letter_bg)
+    let avatar_layer = container(base_layer)
         .width(Fixed(size.outer))
         .height(Fixed(size.outer))
         .align_x(iced::alignment::Horizontal::Left)
@@ -144,6 +166,53 @@ pub fn build_avatar<'a, M: 'a>(
         .width(Fixed(size.outer))
         .height(Fixed(size.outer))
         .into()
+}
+
+
+pub fn favicon_handle(favicon: &str, size: AvatarSize) -> Option<image::Handle> {
+    rounded_favicon(favicon, size.inner, size.letter_radius)
+}
+
+fn decode_favicon(favicon: &str) -> Option<Vec<u8>> {
+    let b64 = favicon.split(',').next_back()?.trim();
+    if b64.is_empty() {
+        return None;
+    }
+    base64::engine::general_purpose::STANDARD.decode(b64).ok()
+}
+
+
+fn rounded_favicon(favicon: &str, display: f32, display_radius: f32) -> Option<image::Handle> {
+    use ::image::imageops::FilterType;
+
+    let bytes = decode_favicon(favicon)?;
+    let img = ::image::load_from_memory(&bytes).ok()?;
+
+    let (w, h) = (img.width(), img.height());
+    let side = w.min(h);
+    if side == 0 {
+        return None;
+    }
+    let square = img.crop_imm((w - side) / 2, (h - side) / 2, side, side);
+
+    let target = ((display.ceil() as u32).max(1)) * 2;
+    let mut buf = square
+        .resize_exact(target, target, FilterType::Lanczos3)
+        .to_rgba8();
+
+    let radius = (display_radius * target as f32 / display).clamp(0.0, target as f32 / 2.0);
+    let (tw, th) = (target as f32, target as f32);
+    for (x, y, px) in buf.enumerate_pixels_mut() {
+        let px_c = x as f32 + 0.5;
+        let py_c = y as f32 + 0.5;
+        let dx = (radius - px_c).max(px_c - (tw - radius)).max(0.0);
+        let dy = (radius - py_c).max(py_c - (th - radius)).max(0.0);
+        let dist = (dx * dx + dy * dy).sqrt();
+        let coverage = (radius - dist + 0.5).clamp(0.0, 1.0);
+        px[3] = (px[3] as f32 * coverage).round() as u8;
+    }
+
+    Some(image::Handle::from_rgba(target, target, buf.into_raw()))
 }
 
 fn palette(name: &str) -> (Color, Color, Color) {

@@ -8,7 +8,7 @@ use iced::{
 };
 use crate::components::ui::{btn, scrollbar as styled_scroll, BtnVariant};
 
-use super::avatar::{build_avatar, AvatarSize};
+use super::avatar::{build_avatar_icon, AvatarSize};
 use crate::app::{McScan, Message, ModalKind};
 use crate::scanner::types::Edition;
 use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
@@ -36,7 +36,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let copy_label = if app.copied { tr.copied } else { tr.copy };
     let server_name = motd_first_line(&server.motd);
 
-    let avatar = build_avatar(&server_name, &server.edition, AvatarSize::LARGE, |t: &Theme| {
+    let avatar = build_avatar_icon(&server_name, &server.edition, app.results.avatar_large(addr), AvatarSize::LARGE, |t: &Theme| {
         if is_dark(t) { c("#181C21") } else { c("#FFFFFF") }
     });
 
@@ -150,27 +150,57 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         .into(),
     );
 
-    let stats_block = container(
-        column![
-            row![
-                stat_cell(tr.players, format!("{} / {}", server.online, server.max_players), false),
-                Space::new().width(9),
-                stat_cell_colored(tr.ping, format!("{} ms", server.latency_ms), ping_color(server.latency_ms)),
-                Space::new().width(9),
-                stat_cell(tr.edition, edition_str.to_string(), false),
-            ],
-            Space::new().height(9),
-            row![
-                stat_cell(tr.version, mc_version, true),
-                Space::new().width(9),
-                stat_cell(tr.protocol, server.protocol.to_string(), true),
-                Space::new().width(9),
-                stat_cell(tr.software, software.unwrap_or_else(|| "—".to_string()), false),
-            ],
-        ]
-        .width(Fill),
-    )
-    .padding(Padding::from([10, 22]));
+    // Дополнительные ячейки, зависящие от эдишена/данных.
+    let mut extra_cells: Vec<Element<'_, Message>> = Vec::new();
+    if let Some(w) = &server.world {
+        extra_cells.push(stat_cell(tr.world, w.clone(), false));
+    }
+    if let Some(gm) = &server.gamemode {
+        extra_cells.push(stat_cell(tr.gamemode, gm.clone(), false));
+    }
+    if let Some(sc) = server.secure_chat {
+        let v = if sc { tr.enabled } else { tr.disabled };
+        extra_cells.push(stat_cell(tr.secure_chat, v.to_string(), false));
+    }
+    if let Some(om) = server.online_mode {
+        let v = if om { tr.online_yes } else { tr.online_no };
+        extra_cells.push(stat_cell(tr.online_mode, v.to_string(), false));
+    }
+    if !server.mods.is_empty() {
+        extra_cells.push(stat_cell(tr.mods, server.mods.len().to_string(), true));
+    }
+
+    let mut stats_col = column![
+        row![
+            stat_cell(tr.players, format!("{} / {}", server.online, server.max_players), false),
+            Space::new().width(9),
+            stat_cell_colored(tr.ping, format!("{} ms", server.latency_ms), ping_color(server.latency_ms)),
+            Space::new().width(9),
+            stat_cell(tr.edition, edition_str.to_string(), false),
+        ],
+        Space::new().height(9),
+        row![
+            stat_cell(tr.version, mc_version, true),
+            Space::new().width(9),
+            stat_cell(tr.protocol, server.protocol.to_string(), true),
+            Space::new().width(9),
+            stat_cell(tr.software, software.unwrap_or_else(|| "—".to_string()), false),
+        ],
+    ]
+    .width(Fill);
+
+    if !extra_cells.is_empty() {
+        let mut extra_row = row![].width(Fill);
+        for (i, cell) in extra_cells.into_iter().enumerate() {
+            if i > 0 {
+                extra_row = extra_row.push(Space::new().width(9));
+            }
+            extra_row = extra_row.push(cell);
+        }
+        stats_col = stats_col.push(Space::new().height(9)).push(extra_row);
+    }
+
+    let stats_block = container(stats_col).padding(Padding::from([10, 22]));
 
     let chart_block = labeled_section(
         tr.latency,
@@ -194,6 +224,41 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
 
 
+    let mods_block = if !server.mods.is_empty() {
+        let mut chips_col = column![].spacing(7);
+        for chunk in server.mods.chunks(3) {
+            let mut r = row![].spacing(7);
+            for m in chunk {
+                let label = if m.version.is_empty() {
+                    m.id.clone()
+                } else {
+                    format!("{} {}", m.id, m.version)
+                };
+                r = r.push(crate::components::ui::chip(label));
+            }
+            chips_col = chips_col.push(r);
+        }
+        let title = format!("{} · {}", tr.mods, server.mods.len());
+        Some(labeled_section_owned(title, chips_col.into()))
+    } else {
+        None
+    };
+
+    let plugins_block = if !server.plugins.is_empty() {
+        let mut chips_col = column![].spacing(7);
+        for chunk in server.plugins.chunks(3) {
+            let mut r = row![].spacing(7);
+            for p in chunk {
+                r = r.push(crate::components::ui::chip(p.clone()));
+            }
+            chips_col = chips_col.push(r);
+        }
+        let title = format!("{} · {}", tr.plugins, server.plugins.len());
+        Some(labeled_section_owned(title, chips_col.into()))
+    } else {
+        None
+    };
+
     let mut body = column![
         header,
         separator,
@@ -203,6 +268,14 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         chart_block,
     ]
     .width(Fill);
+
+    if let Some(s) = mods_block {
+        body = body.push(s);
+    }
+
+    if let Some(s) = plugins_block {
+        body = body.push(s);
+    }
 
     if let Some(s) = samples_block {
         body = body.push(s);
@@ -318,6 +391,24 @@ fn player_chip(name: &str) -> Element<'_, Message> {
     .into()
 }
 
+
+fn labeled_section_owned<'a>(label: String, content: Element<'a, Message>) -> Element<'a, Message> {
+    container(
+        column![
+            text(label)
+                .size(10)
+                .font(SANS_SEMIBOLD)
+                .style(|t: &Theme| text::Style {
+                    color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                }),
+            Space::new().height(8),
+            content,
+        ]
+        .width(Fill),
+    )
+    .padding(Padding::from([10, 22]))
+    .into()
+}
 
 fn labeled_section<'a>(label: &'a str, content: Element<'a, Message>) -> Element<'a, Message> {
     container(

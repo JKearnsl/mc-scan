@@ -51,20 +51,26 @@ fn parse_pong(data: &[u8], addr: SocketAddr, latency_ms: u64) -> Option<ServerIn
 }
 
 fn parse_motd(raw: &str, addr: SocketAddr, latency_ms: u64) -> Option<ServerInfo> {
+    // Format: edition;motd1;protocol;version;online;max;guid;motd2;gamemode;gamemode_num;portV4;portV6
     let parts: Vec<&str> = raw.split(';').collect();
     if parts.len() < 6 {
         return None;
     }
-    Some(ServerInfo {
-        addr,
-        edition: Edition::Bedrock,
-        motd: super::strip_section_codes(parts[1]),
-        protocol: parts[2].parse().unwrap_or(0),
-        version: parts[3].to_string(),
-        online: parts[4].parse().unwrap_or(0),
-        max_players: parts[5].parse().unwrap_or(0),
-        latency_ms,
-        samples: vec![],
-        ping_history: vec![latency_ms],
-    })
+    let get = |i: usize| parts.get(i).map(|s| s.to_string()).filter(|s| !s.is_empty());
+
+    let mut info = ServerInfo::base(addr, Edition::Bedrock);
+    info.motd = super::strip_section_codes(parts[1]);
+    info.protocol = parts[2].parse().unwrap_or(0);
+    info.version = parts[3].to_string();
+    info.online = parts[4].parse().unwrap_or(0);
+    info.max_players = parts[5].parse().unwrap_or(0);
+    info.latency_ms = latency_ms;
+    info.ping_history = vec![latency_ms];
+    info.bedrock_edition = get(0);
+    info.server_guid = get(6);
+    info.sub_motd = get(7).map(|s| super::strip_section_codes(&s));
+    info.gamemode = get(8);
+    info.port_v4 = parts.get(10).and_then(|s| s.trim().parse().ok());
+    info.port_v6 = parts.get(11).and_then(|s| s.trim().parse().ok());
+    Some(info)
 }

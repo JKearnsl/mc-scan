@@ -1,5 +1,7 @@
 mod java;
 mod bedrock;
+mod query;
+mod login;
 pub mod parse;
 pub mod types;
 
@@ -36,10 +38,35 @@ pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = Option<ServerInfo>> +
         .buffer_unordered(concurrency)
 }
 
-pub async fn probe_server(addr: std::net::SocketAddr, edition: types::Edition, timeout_ms: u64) -> Option<types::ServerInfo> {
+pub async fn probe_server(
+    addr: std::net::SocketAddr,
+    edition: types::Edition,
+    timeout_ms: u64,
+    query_enabled: bool,
+    online_mode_check: bool,
+) -> Option<types::ServerInfo> {
     match edition {
-        types::Edition::Java => java::probe(addr, timeout_ms).await,
-        types::Edition::Bedrock => bedrock::probe(addr, timeout_ms).await,
+        Edition::Java => {
+            let mut info = java::probe(addr, timeout_ms).await?;
+            // Query
+            if query_enabled {
+                if let Some(q) = query::probe(addr, timeout_ms).await {
+                    info.world = q.world;
+                    info.plugins = q.plugins;
+                    // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
+                    if !q.players.is_empty() {
+                        info.samples = q.players;
+                        info.sample_ids.clear();
+                    }
+                }
+            }
+            // Detect online/offline-mode
+            if online_mode_check {
+                info.online_mode = login::probe(addr, info.protocol, timeout_ms).await;
+            }
+            Some(info)
+        }
+        Edition::Bedrock => bedrock::probe(addr, timeout_ms).await,
     }
 }
 
