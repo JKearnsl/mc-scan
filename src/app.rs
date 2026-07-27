@@ -12,6 +12,14 @@ use crate::i18n::{self, Language, Tr};
 use crate::scanner::parse::{parse_ip_ranges, parse_ports};
 use crate::scanner::types::{ScanConfig, ServerInfo};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
+use once_cell::sync::Lazy;
+
+static RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("build shared tokio runtime")
+});
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModalKind {
@@ -328,14 +336,11 @@ impl McScan {
         let query_enabled = self.settings.query_enabled;
         let online_mode_check = self.settings.online_mode_check;
         let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
-        std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("tokio refresh rt");
-            let result = rt.block_on(crate::scanner::probe_server(
+        RUNTIME.spawn(async move {
+            let result = crate::scanner::probe_server(
                 addr, edition, timeout, query_enabled, online_mode_check,
-            ));
+            )
+            .await;
             let _ = tx.send(result);
         });
         Task::perform(async move { rx.await.ok().flatten() }, Message::ServerRefreshed)
@@ -362,19 +367,13 @@ fn app_bg_style(t: &iced::Theme) -> iced::widget::container::Style {
 
 fn refresh_timer_stream(_: &u8) -> BoxStream<'static, Message> {
     let (tx, rx) = mpsc::unbounded();
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_time()
-            .build()
-            .expect("tokio timer runtime");
-        rt.block_on(async move {
-            loop {
-                tokio::time::sleep(Duration::from_secs(30)).await;
-                if tx.unbounded_send(Message::RefreshTick).is_err() {
-                    break;
-                }
+    RUNTIME.spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            if tx.unbounded_send(Message::RefreshTick).is_err() {
+                break;
             }
-        });
+        }
     });
     Box::pin(rx)
 }
