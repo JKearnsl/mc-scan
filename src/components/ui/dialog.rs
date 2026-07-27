@@ -1,6 +1,6 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{column, container, mouse_area, row, svg, text};
+use iced::widget::{column, container, mouse_area, row, text};
 use iced::Length::Fixed;
 use iced::mouse::Interaction;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
@@ -16,7 +16,7 @@ pub fn dialog<'a, M: Clone + 'a>(
     width: f32,
     body: Element<'a, M>,
 ) -> Element<'a, M> {
-    let close_icon = svg::Handle::from_path(format!("{}/assets/close.svg", env!("CARGO_MANIFEST_DIR")));
+    let close_icon = super::icons::close();
 
     let inner = column![
         row![

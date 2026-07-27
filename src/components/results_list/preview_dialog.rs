@@ -25,8 +25,8 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     };
 
     let tr = app.tr();
-    let close_icon = svg::Handle::from_path(format!("{}/assets/close.svg", env!("CARGO_MANIFEST_DIR")));
-    let copy_icon  = svg::Handle::from_path(format!("{}/assets/copy.svg",  env!("CARGO_MANIFEST_DIR")));
+    let close_icon = crate::components::ui::icons::close();
+    let copy_icon  = crate::components::ui::icons::copy();
 
     let (software, mc_version) = split_version(&server.version);
     let edition_str = match server.edition {
