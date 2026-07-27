@@ -68,9 +68,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         checkbox(tr.query_label, app.settings.query_enabled, Message::ToggleQuery),
         Space::new().height(8),
         checkbox(tr.online_mode_label, app.settings.online_mode_check, Message::ToggleOnlineModeCheck),
-        Space::new().height(20),
-        btn(BtnVariant::Primary(tr.done), Message::CloseModal),
     ];
 
-    dialog(tr.settings, Message::CloseModal, Message::NoOp, 380.0, body.into())
+    dialog(tr.settings, Message::CloseModal, Message::NoOp, 380.0, 540.0, body.into())
 }
