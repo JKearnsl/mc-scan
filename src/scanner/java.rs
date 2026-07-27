@@ -51,13 +51,23 @@ fn build_handshake(host: &str, port: u16) -> Vec<u8> {
     packet
 }
 
+/// Hard cap on the SLP status JSON. A well-formed status (even with a 64×64
+/// favicon and a full player sample) stays well under this. The cap protects
+/// against a malicious/broken server sending a huge or negative length, which
+/// would otherwise allocate multiple gigabytes (OOM) or, for a negative VarInt
+/// widened via `as usize`, abort the process on a capacity overflow.
+const MAX_STATUS_BYTES: usize = 4 * 1024 * 1024;
+
 async fn read_response(stream: &mut TcpStream) -> Option<Value> {
     let _len = read_varint(stream).await?;
     if read_varint(stream).await? != 0x00 {
         return None;
     }
-    let str_len = read_varint(stream).await? as usize;
-    let mut buf = vec![0u8; str_len];
+    let str_len = read_varint(stream).await?;
+    if str_len < 0 || str_len as usize > MAX_STATUS_BYTES {
+        return None;
+    }
+    let mut buf = vec![0u8; str_len as usize];
     stream.read_exact(&mut buf).await.ok()?;
     serde_json::from_slice(&buf).ok()
 }
@@ -153,5 +163,57 @@ fn parse_description(v: &Value) -> String {
             format!("{}{}", text, extras)
         }
         _ => String::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::net::TcpListener;
+
+    /// Serve `bytes` to a single client and run `read_response` against it.
+    async fn read_response_of(bytes: Vec<u8>) -> Option<Value> {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut s, _) = listener.accept().await.unwrap();
+            let _ = s.write_all(&bytes).await;
+        });
+        let mut client = TcpStream::connect(addr).await.unwrap();
+        let out = read_response(&mut client).await;
+        let _ = server.await;
+        out
+    }
+
+    fn framed_status(json: &[u8]) -> Vec<u8> {
+        let mut inner = vec![0x00]; // packet id
+        write_varint(&mut inner, json.len() as i32);
+        inner.extend_from_slice(json);
+        let mut packet = Vec::new();
+        write_varint(&mut packet, inner.len() as i32);
+        packet.extend_from_slice(&inner);
+        packet
+    }
+
+    #[tokio::test]
+    async fn rejects_negative_status_length() {
+        // len=5, id=0x00, str_len = VarInt(-1) = FF FF FF FF 0F.
+        // Without the guard this aborts the process on `vec!` capacity overflow.
+        let bytes = vec![0x05, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F];
+        assert!(read_response_of(bytes).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn rejects_oversized_status_length() {
+        // str_len = VarInt(i32::MAX) = FF FF FF FF 07 (~2 GiB) => rejected by cap.
+        let bytes = vec![0x05, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x07];
+        assert!(read_response_of(bytes).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn parses_within_cap() {
+        let json = br#"{"players":{"online":3,"max":20}}"#;
+        let v = read_response_of(framed_status(json)).await.expect("should parse");
+        assert_eq!(v["players"]["online"].as_u64(), Some(3));
     }
 }
