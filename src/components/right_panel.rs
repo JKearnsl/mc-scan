@@ -1,6 +1,6 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{column, container, row, svg, text};
+use iced::widget::{column, container, row, text};
 use iced::Length::Fixed;
 use iced::{Alignment, Background, Element, Fill, Padding, Theme};
 
@@ -10,8 +10,8 @@ use crate::styles::{c, is_dark, MONO, SANS, SANS_SEMIBOLD};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let tr = app.tr();
-    let settings_icon = svg::Handle::from_path(format!("{}/assets/settings.svg", env!("CARGO_MANIFEST_DIR")));
-    let plus_icon = svg::Handle::from_path(format!("{}/assets/plus.svg", env!("CARGO_MANIFEST_DIR")));
+    let settings_icon = crate::components::ui::icons::settings();
+    let plus_icon = crate::components::ui::icons::plus();
 
     let top_row = row![
         action_button::render(app),

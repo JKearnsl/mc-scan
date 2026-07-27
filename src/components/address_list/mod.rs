@@ -61,10 +61,7 @@ impl AddressList {
     }
 
     pub fn view(&self) -> Element<'_, AddressListMessage> {
-        let trash_handle = svg::Handle::from_path(format!(
-            "{}/assets/trash.svg",
-            env!("CARGO_MANIFEST_DIR")
-        ));
+        let trash_handle = crate::components::ui::icons::trash();
 
         // Fallback threshold: if too many items to fit in a typical panel height,
         // assume scrollbar is visible before the user has scrolled

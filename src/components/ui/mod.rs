@@ -1,6 +1,7 @@
 mod badge;
 mod button;
 mod dialog;
+pub mod icons;
 mod input;
 mod scrollbar;
 mod textarea;

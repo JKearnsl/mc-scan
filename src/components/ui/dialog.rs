@@ -18,7 +18,7 @@ pub fn dialog<'a, M: Clone + 'a>(
     max_height: f32,
     body: Element<'a, M>,
 ) -> Element<'a, M> {
-    let close_icon = svg::Handle::from_path(format!("{}/assets/close.svg", env!("CARGO_MANIFEST_DIR")));
+    let close_icon = super::icons::close();
 
     let header = container(
         row![
