@@ -1,12 +1,13 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{column, container, mouse_area, row, text};
-use iced::Length::Fixed;
+use iced::widget::{column, container, mouse_area, row, svg, text};
+use iced::Length::{Fixed, Shrink};
 use iced::mouse::Interaction;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
-use crate::components::ui::{btn, BtnVariant};
+use crate::components::ui::{btn, scrollbar, BtnVariant};
 use crate::styles::{c, is_dark, SANS_SEMIBOLD};
+
 
 
 pub fn dialog<'a, M: Clone + 'a>(
@@ -14,11 +15,12 @@ pub fn dialog<'a, M: Clone + 'a>(
     on_close: M,
     on_stop: M,
     width: f32,
+    max_height: f32,
     body: Element<'a, M>,
 ) -> Element<'a, M> {
     let close_icon = super::icons::close();
 
-    let inner = column![
+    let header = container(
         row![
             text(title).size(16).font(SANS_SEMIBOLD).style(|t: &Theme| text::Style {
                 color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
@@ -27,11 +29,20 @@ pub fn dialog<'a, M: Clone + 'a>(
             btn(BtnVariant::Icon { handle: close_icon, size: 14.0 }, on_close.clone()),
         ]
         .align_y(Alignment::Center),
-        body
-    ]
-        .padding(Padding::from([20, 24]));
+    )
+    .padding(Padding { top: 20.0, right: 24.0, bottom: 0.0, left: 24.0 });
 
-    let dlg = container(inner).width(Fixed(width)).style(style);
+    let scroll_body = scrollbar(
+        container(body).padding(Padding { top: 0.0, right: 24.0, bottom: 20.0, left: 24.0 }),
+    )
+    .height(Shrink);
+
+    let inner = column![header, scroll_body];
+
+    let dlg = container(inner)
+        .width(Fixed(width))
+        .max_height(max_height)
+        .style(style);
 
     mouse_area(
         container(mouse_area(dlg).on_press(on_stop))
