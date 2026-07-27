@@ -1,6 +1,6 @@
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
-use iced::widget::{column, container, mouse_area, row, svg, text};
+use iced::widget::{column, container, mouse_area, row, text};
 use iced::Length::{Fixed, Shrink};
 use iced::mouse::Interaction;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
