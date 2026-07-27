@@ -17,7 +17,7 @@ const PLAYER_PREFIX: &[u8] = b"\x01player_\x00\x00";
 
 pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<QueryData> {
     let dur = Duration::from_millis(timeout_ms);
-    let socket = UdpSocket::bind("0.0.0.0:0").await.ok()?;
+    let socket = UdpSocket::bind(super::local_bind_addr(&addr)).await.ok()?;
     socket.connect(addr).await.ok()?;
 
     let session_id: i32 = 1;

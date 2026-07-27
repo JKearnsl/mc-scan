@@ -13,7 +13,7 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
     let dur = Duration::from_millis(timeout_ms);
     let start = Instant::now();
 
-    let socket = UdpSocket::bind("0.0.0.0:0").await.ok()?;
+    let socket = UdpSocket::bind(super::local_bind_addr(&addr)).await.ok()?;
     socket.connect(addr).await.ok()?;
 
     timeout(dur, socket.send(&build_ping())).await.ok()?.ok()?;

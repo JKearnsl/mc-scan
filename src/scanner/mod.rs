@@ -70,6 +70,13 @@ pub async fn probe_server(
     }
 }
 
+/// Local bind address for an outbound UDP probe, matched to the target's
+/// address family. Binding `0.0.0.0` (IPv4) and then connecting to an IPv6
+/// target fails, so IPv6 UDP probes must bind `[::]`.
+pub(super) fn local_bind_addr(target: &SocketAddr) -> &'static str {
+    if target.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }
+}
+
 pub(super) fn strip_section_codes(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
