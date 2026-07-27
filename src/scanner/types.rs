@@ -109,8 +109,25 @@ pub struct ScanConfig {
 
 impl ScanConfig {
     pub fn target_count(&self) -> usize {
-        let hosts: usize = self.ranges.iter().map(|r| r.hosts().count()).sum();
-        hosts * (self.java_ports.len() + self.bedrock_ports.len())
+        let ports = (self.java_ports.len() + self.bedrock_ports.len()) as u128;
+        let hosts: u128 = self.ranges.iter().map(host_count).sum();
+        hosts.saturating_mul(ports).min(usize::MAX as u128) as usize
+    }
+}
+
+/// Number of probeable hosts in `net`, matching `IpNet::hosts()`: IPv4 excludes
+/// network and broadcast (except /31 and /32), IPv6 includes every address.
+fn host_count(net: &IpNet) -> u128 {
+    match net {
+        IpNet::V4(n) => match n.prefix_len() {
+            32 => 1,
+            31 => 2,
+            p => (1u128 << (32 - p)) - 2,
+        },
+        IpNet::V6(n) => {
+            let bits = 128 - n.prefix_len() as u32;
+            if bits >= 128 { u128::MAX } else { 1u128 << bits }
+        }
     }
 }
 
@@ -123,5 +140,39 @@ impl Default for ScanConfig {
             concurrency: 1024,
             timeout_ms: 1500,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg(ranges: &[&str]) -> ScanConfig {
+        ScanConfig {
+            ranges: ranges.iter().map(|s| s.parse().unwrap()).collect(),
+            java_ports: vec![25565],
+            bedrock_ports: vec![19132],
+            concurrency: 1,
+            timeout_ms: 1,
+        }
+    }
+
+    #[test]
+    fn host_count_ipv4_matches_hosts_iter() {
+        assert_eq!(host_count(&"10.0.0.0/24".parse().unwrap()), 254);
+        assert_eq!(host_count(&"10.0.0.0/30".parse().unwrap()), 2);
+        assert_eq!(host_count(&"10.0.0.0/31".parse().unwrap()), 2);
+        assert_eq!(host_count(&"10.0.0.5/32".parse().unwrap()), 1);
+    }
+
+    #[test]
+    fn host_count_ipv6_includes_all() {
+        assert_eq!(host_count(&"2001:db8::/126".parse().unwrap()), 4);
+    }
+
+    #[test]
+    fn target_count_multiplies_ports_and_saturates() {
+        assert_eq!(cfg(&["10.0.0.0/24"]).target_count(), 254 * 2);
+        assert_eq!(cfg(&["2001:db8::/32"]).target_count(), usize::MAX);
     }
 }
