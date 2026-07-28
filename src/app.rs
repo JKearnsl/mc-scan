@@ -24,6 +24,8 @@ static RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 // Kept under the fd limit raised in main (>= 10240 on unix) with headroom for the window/GPU.
 const MAX_CONCURRENCY: usize = 8192;
 
+const REFRESH_TIMER_ID: u8 = 0;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModalKind {
     None,
@@ -284,7 +286,7 @@ impl McScan {
         };
 
         let refresh_sub = if self.results.count() > 0 {
-            Subscription::run_with(42u8, refresh_timer_stream)
+            Subscription::run_with(REFRESH_TIMER_ID, refresh_timer_stream)
         } else {
             Subscription::none()
         };
