@@ -15,13 +15,26 @@ const PLEX_MONO_SEMIBOLD: &[u8] = include_bytes!("../assets/fonts/IBMPlexMono-Se
 
 const APP_ICON: &[u8] = include_bytes!("../assets/icon.png");
 
+// macOS reports the hard limit as "infinity", which `setrlimit` rejects (the
+// real ceiling is `kern.maxfilesperproc`), so raising the soft limit to the hard
+// limit fails there and leaves it at the default 256. Fall back through concrete
+// targets until one is accepted.
 #[cfg(unix)]
 fn raise_fd_limit() {
     unsafe {
         let mut lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
-        if libc::getrlimit(libc::RLIMIT_NOFILE, &mut lim) == 0 && lim.rlim_cur < lim.rlim_max {
-            lim.rlim_cur = lim.rlim_max;
-            let _ = libc::setrlimit(libc::RLIMIT_NOFILE, &lim);
+        if libc::getrlimit(libc::RLIMIT_NOFILE, &mut lim) != 0 || lim.rlim_cur >= lim.rlim_max {
+            return;
+        }
+        let original_cur = lim.rlim_cur; // compared against, since lim.rlim_cur gets overwritten below
+        for &target in &[lim.rlim_max, 1_048_576, 65_536, 10_240] {
+            if target <= original_cur {
+                continue;
+            }
+            lim.rlim_cur = target;
+            if libc::setrlimit(libc::RLIMIT_NOFILE, &lim) == 0 {
+                break;
+            }
         }
     }
 }

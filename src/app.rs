@@ -21,6 +21,9 @@ static RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
         .expect("build shared tokio runtime")
 });
 
+// Kept under the fd limit raised in main (>= 10240 on unix) with headroom for the window/GPU.
+const MAX_CONCURRENCY: usize = 8192;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModalKind {
     None,
@@ -351,7 +354,12 @@ impl McScan {
             ranges: self.address_list.values().to_vec(),
             java_ports: self.settings.java_ports_parsed(),
             bedrock_ports: self.settings.bedrock_ports_parsed(),
-            concurrency: self.settings.concurrency.parse().unwrap_or(1024).max(1),
+            concurrency: self
+                .settings
+                .concurrency
+                .parse()
+                .unwrap_or(1024)
+                .clamp(1, MAX_CONCURRENCY),
             timeout_ms: self.settings.timeout_ms.parse().unwrap_or(1500).max(100),
         }
     }
