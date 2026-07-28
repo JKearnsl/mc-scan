@@ -186,7 +186,17 @@ fn rounded_favicon(favicon: &str, display: f32, display_radius: f32) -> Option<i
     use ::image::imageops::FilterType;
 
     let bytes = decode_favicon(favicon)?;
-    let img = ::image::load_from_memory(&bytes).ok()?;
+
+    // Bound the decode: a hostile favicon could be a PNG decompression bomb.
+    let mut reader = ::image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .ok()?;
+    let mut limits = ::image::Limits::default();
+    limits.max_image_width = Some(1024);
+    limits.max_image_height = Some(1024);
+    limits.max_alloc = Some(16 * 1024 * 1024);
+    reader.limits(limits);
+    let img = reader.decode().ok()?;
 
     let (w, h) = (img.width(), img.height());
     let side = w.min(h);
