@@ -267,7 +267,7 @@ impl McScan {
     pub fn subscription(&self) -> Subscription<Message> {
         let scan_sub = if self.is_scanning {
             let config = Arc::new(self.scan_config());
-            Subscription::run_with((self.scan_id, config), build_scan_stream)
+            Subscription::run_with(ScanKey { id: self.scan_id, config }, build_scan_stream)
         } else {
             Subscription::none()
         };
@@ -379,8 +379,20 @@ fn refresh_timer_stream(_: &u8) -> BoxStream<'static, Message> {
     Box::pin(rx)
 }
 
-fn build_scan_stream(data: &(u64, Arc<ScanConfig>)) -> BoxStream<'static, Message> {
-    let config = data.1.clone();
+struct ScanKey {
+    id: u64,
+    config: Arc<ScanConfig>,
+}
+
+// Subscription identity is the id alone; the config must not be hashed.
+impl std::hash::Hash for ScanKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+fn build_scan_stream(key: &ScanKey) -> BoxStream<'static, Message> {
+    let config = key.config.clone();
     let (tx, rx) = mpsc::unbounded();
 
     std::thread::spawn(move || {
