@@ -7,6 +7,7 @@ use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 use iced::Length::Fixed;
 use ipnet::IpNet;
 use crate::components::ui::scrollbar;
+use crate::scanner::types::host_count;
 use crate::styles::{c, is_dark, MONO};
 
 #[derive(Debug, Clone)]
@@ -57,7 +58,8 @@ impl AddressList {
     }
 
     pub fn total_hosts(&self) -> u64 {
-        self.values.iter().map(net_host_count).sum()
+        let total: u128 = self.values.iter().map(host_count).sum();
+        total.min(u64::MAX as u128) as u64
     }
 
     pub fn view(&self) -> Element<'_, AddressListMessage> {
@@ -92,7 +94,7 @@ fn range_row(
 ) -> Element<'_, AddressListMessage> {
     let net_str = net.to_string();
     let right_side = row![
-        text(format_host_count(net_host_count(net)))
+        text(format_host_count(host_count(net)))
             .size(11)
             .font(MONO)
             .style(|t: &Theme| text::Style {
@@ -155,21 +157,8 @@ fn range_row(
         .into()
 }
 
-fn net_host_count(net: &IpNet) -> u64 {
-    match net {
-        IpNet::V4(n) => {
-            let bits = 32u64.saturating_sub(n.prefix_len() as u64);
-            1u64 << bits
-        }
-        IpNet::V6(n) => {
-            let bits = 128u64.saturating_sub(n.prefix_len() as u64);
-            if bits >= 64 { u64::MAX } else { 1u64 << bits }
-        }
-    }
-}
-
-fn format_host_count(n: u64) -> String {
-    if n == u64::MAX { "∞".to_string() } else { n.to_string() }
+fn format_host_count(n: u128) -> String {
+    if n > u64::MAX as u128 { "∞".to_string() } else { n.to_string() }
 }
 
 fn trash_btn_style(t: &Theme, status: iced::widget::button::Status) -> iced::widget::button::Style {

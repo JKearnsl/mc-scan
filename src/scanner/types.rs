@@ -117,7 +117,7 @@ impl ScanConfig {
 
 /// Number of probeable hosts in `net`, matching `IpNet::hosts()`: IPv4 excludes
 /// network and broadcast (except /31 and /32), IPv6 includes every address.
-fn host_count(net: &IpNet) -> u128 {
+pub(crate) fn host_count(net: &IpNet) -> u128 {
     match net {
         IpNet::V4(n) => match n.prefix_len() {
             32 => 1,
