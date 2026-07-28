@@ -1,7 +1,4 @@
 //! SVG icons embedded with `include_bytes!` and cached as handles.
-//!
-//! Loading them from `CARGO_MANIFEST_DIR` paths (the previous approach) only
-//! works on the build machine and re-reads the file on every `view()`.
 
 use iced::widget::svg;
 use once_cell::sync::Lazy;
