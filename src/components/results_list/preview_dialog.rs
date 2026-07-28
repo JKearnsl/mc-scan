@@ -28,7 +28,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let close_icon = crate::components::ui::icons::close();
     let copy_icon  = crate::components::ui::icons::copy();
 
-    let (software, mc_version) = split_version(&server.version);
+    let (software, mc_version) = super::parse_version(&server.version);
     let edition_str = match server.edition {
         Edition::Java    => tr.java_edition,
         Edition::Bedrock => tr.bedrock_edition,
@@ -483,17 +483,6 @@ fn motd_first_line(motd: &str) -> String {
         .unwrap_or("")
         .trim()
         .to_string()
-}
-
-fn split_version(raw: &str) -> (Option<String>, String) {
-    if let Some(pos) = raw.find(' ') {
-        let prefix = &raw[..pos];
-        let rest = raw[pos + 1..].trim();
-        if !prefix.is_empty() && prefix.chars().next().map_or(false, |c| c.is_ascii_alphabetic()) {
-            return (Some(prefix.to_string()), rest.to_string());
-        }
-    }
-    (None, raw.to_string())
 }
 
 fn ping_color(ms: u64) -> Color {

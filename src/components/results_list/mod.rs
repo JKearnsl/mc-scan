@@ -161,3 +161,14 @@ fn card_btn_style(t: &Theme, status: button::Status) -> button::Style {
         _ => base,
     }
 }
+
+pub(crate) fn parse_version(raw: &str) -> (Option<String>, String) {
+    if let Some(pos) = raw.find(' ') {
+        let prefix = &raw[..pos];
+        let rest = raw[pos + 1..].trim();
+        if !prefix.is_empty() && prefix.chars().next().map_or(false, |c| c.is_ascii_alphabetic()) {
+            return (Some(prefix.to_string()), rest.to_string());
+        }
+    }
+    (None, raw.to_string())
+}
