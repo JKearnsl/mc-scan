@@ -151,6 +151,7 @@ fn parse_mods(json: &Value) -> Vec<ModInfo> {
 fn parse_description(v: &Value) -> String {
     match v {
         Value::String(s) => super::strip_section_codes(s),
+        Value::Array(arr) => arr.iter().map(parse_description).collect(),
         Value::Object(map) => {
             let text = map.get("text")
                 .and_then(|v| v.as_str())
@@ -215,5 +216,12 @@ mod tests {
         let json = br#"{"players":{"online":3,"max":20}}"#;
         let v = read_response_of(framed_status(json)).await.expect("should parse");
         assert_eq!(v["players"]["online"].as_u64(), Some(3));
+    }
+
+    #[test]
+    fn description_array_is_concatenated() {
+        use serde_json::json;
+        assert_eq!(parse_description(&json!(["a", "b"])), "ab");
+        assert_eq!(parse_description(&json!([{"text": "x"}, {"text": "y"}])), "xy");
     }
 }
