@@ -60,6 +60,11 @@ pub enum Message {
     CopiedReset,
     RefreshTick,
     ServerRefreshed(Option<ServerInfo>),
+    AvatarDecoded {
+        addr: SocketAddr,
+        small: Option<iced::widget::image::Handle>,
+        large: Option<iced::widget::image::Handle>,
+    },
     NoOp,
 }
 
@@ -165,7 +170,12 @@ impl McScan {
             Message::ScanStop => self.is_scanning = false,
 
             Message::ServerFound(info) => {
+                let addr = info.addr;
+                let favicon = info.favicon.clone();
                 self.results.push(info);
+                if let Some(f) = favicon {
+                    return self.spawn_favicon_decode(addr, f);
+                }
             }
 
             Message::ScanProgress(n) => {
@@ -262,10 +272,17 @@ impl McScan {
             }
 
             Message::ServerRefreshed(Some(info)) => {
-                self.results.refresh(info);
+                let addr = info.addr;
+                if let Some(f) = self.results.refresh(info) {
+                    return self.spawn_favicon_decode(addr, f);
+                }
             }
 
             Message::ServerRefreshed(None) => {}
+
+            Message::AvatarDecoded { addr, small, large } => {
+                self.results.set_avatars(addr, small, large);
+            }
 
             Message::NoOp => {}
         }
@@ -349,6 +366,17 @@ impl McScan {
             let _ = tx.send(result);
         });
         Task::perform(async move { rx.await.ok().flatten() }, Message::ServerRefreshed)
+    }
+
+    fn spawn_favicon_decode(&self, addr: SocketAddr, favicon: String) -> Task<Message> {
+        let (tx, rx) = oneshot::channel();
+        RUNTIME.spawn_blocking(move || {
+            let _ = tx.send(crate::components::results_list::decode_favicon_avatars(&favicon));
+        });
+        Task::perform(async move { rx.await.ok() }, move |res| match res {
+            Some((small, large)) => Message::AvatarDecoded { addr, small, large },
+            None => Message::NoOp,
+        })
     }
 
     fn scan_config(&self) -> ScanConfig {

@@ -31,7 +31,6 @@ pub enum ResultsListMessage {
 
 impl ResultsList {
     pub fn push(&mut self, info: ServerInfo) {
-        self.cache_avatars(info.addr, info.favicon.as_deref());
         self.items.push(info);
     }
     pub fn clear(&mut self) {
@@ -50,29 +49,26 @@ impl ResultsList {
         self.avatars_large.get(&addr).cloned()
     }
 
-    fn cache_avatars(&mut self, addr: SocketAddr, favicon: Option<&str>) {
-        match favicon {
-            Some(f) => {
-                match favicon_handle(f, AvatarSize::SMALL) {
-                    Some(h) => { self.avatars_small.insert(addr, h); }
-                    None => { self.avatars_small.remove(&addr); }
-                }
-                match favicon_handle(f, AvatarSize::LARGE) {
-                    Some(h) => { self.avatars_large.insert(addr, h); }
-                    None => { self.avatars_large.remove(&addr); }
-                }
-            }
-            None => {
-                self.avatars_small.remove(&addr);
-                self.avatars_large.remove(&addr);
-            }
+    pub fn set_avatars(&mut self, addr: SocketAddr, small: Option<image::Handle>, large: Option<image::Handle>) {
+        match small {
+            Some(h) => { self.avatars_small.insert(addr, h); }
+            None => { self.avatars_small.remove(&addr); }
+        }
+        match large {
+            Some(h) => { self.avatars_large.insert(addr, h); }
+            None => { self.avatars_large.remove(&addr); }
         }
     }
 
-    pub fn refresh(&mut self, info: ServerInfo) {
+    /// Returns the new favicon to decode if it changed (the old avatar is cleared).
+    pub fn refresh(&mut self, info: ServerInfo) -> Option<String> {
         let addr = info.addr;
+        let new_favicon = info.favicon.clone();
         let favicon_changed;
-        if let Some(s) = self.items.iter_mut().find(|s| s.addr == addr) {
+        {
+            let Some(s) = self.items.iter_mut().find(|s| s.addr == addr) else {
+                return None;
+            };
             s.online = info.online;
             s.max_players = info.max_players;
             s.latency_ms = info.latency_ms;
@@ -90,13 +86,14 @@ impl ResultsList {
             if s.ping_history.len() > 30 {
                 s.ping_history.remove(0);
             }
-        } else {
-            return;
         }
 
         if favicon_changed {
-            let fav = self.items.iter().find(|s| s.addr == addr).and_then(|s| s.favicon.clone());
-            self.cache_avatars(addr, fav.as_deref());
+            self.avatars_small.remove(&addr);
+            self.avatars_large.remove(&addr);
+            new_favicon
+        } else {
+            None
         }
     }
 
@@ -171,4 +168,11 @@ pub(crate) fn parse_version(raw: &str) -> (Option<String>, String) {
         }
     }
     (None, raw.to_string())
+}
+
+pub(crate) fn decode_favicon_avatars(favicon: &str) -> (Option<image::Handle>, Option<image::Handle>) {
+    (
+        favicon_handle(favicon, AvatarSize::SMALL),
+        favicon_handle(favicon, AvatarSize::LARGE),
+    )
 }
