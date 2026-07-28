@@ -3,8 +3,27 @@ use iced::theme::Palette;
 use iced::{Color, Font, Theme};
 use once_cell::sync::Lazy;
 
-pub fn c(hex: &str) -> Color {
-    hex.parse().expect(&format!("parse hex color {}", hex))
+pub const fn c(hex: &str) -> Color {
+    let b = hex.as_bytes();
+    Color {
+        r: hex_pair(b[1], b[2]) as f32 / 255.0,
+        g: hex_pair(b[3], b[4]) as f32 / 255.0,
+        b: hex_pair(b[5], b[6]) as f32 / 255.0,
+        a: 1.0,
+    }
+}
+
+const fn hex_pair(hi: u8, lo: u8) -> u8 {
+    hex_digit(hi) * 16 + hex_digit(lo)
+}
+
+const fn hex_digit(d: u8) -> u8 {
+    match d {
+        b'0'..=b'9' => d - b'0',
+        b'a'..=b'f' => d - b'a' + 10,
+        b'A'..=b'F' => d - b'A' + 10,
+        _ => panic!("invalid hex digit in color literal"),
+    }
 }
 
 pub fn is_dark(t: &Theme) -> bool {
