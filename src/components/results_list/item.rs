@@ -53,7 +53,7 @@ pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Hand
     let left_block = left_col.spacing(3).width(Fill).clip(true);
 
     let ping_str = format!("{} ms", info.latency_ms);
-    let (software, ver_str) = parse_version(&info.version);
+    let (software, ver_str) = super::parse_version(&info.version);
 
     let right_block = row![
         players_column(info.online as u64, info.max_players as u64, tr.players),
@@ -150,17 +150,6 @@ fn version_column(version: String, software: Option<String>, label: &'static str
 
 pub(crate) fn ping_color(ms: u64) -> Color {
     if ms < 80 { c("#3DD68C") } else if ms <= 200 { c("#E0B23C") } else { c("#E5604D") }
-}
-
-pub(crate) fn parse_version(raw: &str) -> (Option<String>, String) {
-    if let Some(pos) = raw.find(' ') {
-        let prefix = &raw[..pos];
-        let rest = raw[pos + 1..].trim();
-        if !prefix.is_empty() && prefix.chars().next().map_or(false, |c| c.is_ascii_alphabetic()) {
-            return (Some(prefix.to_string()), rest.to_string());
-        }
-    }
-    (None, raw.to_string())
 }
 
 fn split_motd(motd: &str) -> (String, String) {
