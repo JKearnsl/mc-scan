@@ -27,3 +27,8 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
