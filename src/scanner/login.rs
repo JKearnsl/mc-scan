@@ -31,22 +31,32 @@ pub async fn probe(addr: SocketAddr, protocol: i32, timeout_ms: u64) -> Option<b
     let ls = build_login_start(env!("CARGO_PKG_NAME"), protocol);
     timeout(dur, stream.write_all(&ls)).await.ok()?.ok()?;
 
-    let mut buf = [0u8; 512];
-    let n = timeout(dur, stream.read(&mut buf)).await.ok()?.ok()?;
-    if n == 0 {
-        return None;
-    }
-    parse_first_packet_id(&buf[..n])
+    let _len = timeout(dur, read_varint_stream(&mut stream)).await.ok()??;
+    let id = timeout(dur, read_varint_stream(&mut stream)).await.ok()??;
+    classify_login_packet(id)
 }
 
-fn parse_first_packet_id(data: &[u8]) -> Option<bool> {
-    let mut pos = 0usize;
-    let _len = read_varint(data, &mut pos)?;
-    let id = read_varint(data, &mut pos)?;
+fn classify_login_packet(id: i32) -> Option<bool> {
     match id {
         0x01 => Some(true),         // Encryption Request => online-mode
         0x02 | 0x03 => Some(false), // Login Success / Set Compression => offline-mode
         _ => None,                  // 0x00 Disconnect etc.
+    }
+}
+
+async fn read_varint_stream(stream: &mut TcpStream) -> Option<i32> {
+    let mut result = 0i32;
+    let mut shift = 0u32;
+    loop {
+        let b = stream.read_u8().await.ok()?;
+        result |= ((b & 0x7F) as i32) << shift;
+        if b & 0x80 == 0 {
+            return Some(result);
+        }
+        shift += 7;
+        if shift >= 35 {
+            return None;
+        }
     }
 }
 
@@ -110,37 +120,39 @@ fn write_string(buf: &mut Vec<u8>, s: &str) {
     buf.extend_from_slice(s.as_bytes());
 }
 
-fn read_varint(data: &[u8], pos: &mut usize) -> Option<i32> {
-    let mut result = 0i32;
-    let mut shift = 0u32;
-    loop {
-        let b = *data.get(*pos)?;
-        *pos += 1;
-        result |= ((b & 0x7F) as i32) << shift;
-        if b & 0x80 == 0 {
-            return Some(result);
-        }
-        shift += 7;
-        if shift >= 35 {
-            return None;
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn detects_by_first_packet_id() {
-        // len=1, id=0x01 (Encryption Request)
-        assert_eq!(parse_first_packet_id(&[0x01, 0x01]), Some(true));
-        // Set Compression
-        assert_eq!(parse_first_packet_id(&[0x02, 0x03, 0x80]), Some(false));
-        // Login Success
-        assert_eq!(parse_first_packet_id(&[0x01, 0x02]), Some(false));
-        // Disconnect => undefined
-        assert_eq!(parse_first_packet_id(&[0x05, 0x00, 0x01, 0x02, 0x03]), None);
+    fn classify_maps_packet_ids() {
+        assert_eq!(classify_login_packet(0x01), Some(true));  // Encryption Request
+        assert_eq!(classify_login_packet(0x02), Some(false)); // Login Success
+        assert_eq!(classify_login_packet(0x03), Some(false)); // Set Compression
+        assert_eq!(classify_login_packet(0x00), None);        // Disconnect
+    }
+
+    #[tokio::test]
+    async fn reads_varints_arriving_in_separate_segments() {
+        use tokio::io::AsyncWriteExt;
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut s, _) = listener.accept().await.unwrap();
+            for byte in [0x01u8, 0x01] {
+                let _ = s.write_all(&[byte]).await;
+                let _ = s.flush().await;
+            }
+        });
+        let mut client = TcpStream::connect(addr).await.unwrap();
+        let len = read_varint_stream(&mut client).await;
+        let id = read_varint_stream(&mut client).await;
+        let _ = server.await;
+
+        assert_eq!(len, Some(1));
+        assert_eq!(classify_login_packet(id.unwrap()), Some(true));
     }
 
     #[test]
