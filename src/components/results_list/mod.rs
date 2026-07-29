@@ -1,20 +1,25 @@
 mod avatar;
 mod item;
 pub mod preview_dialog;
+mod virtual_list;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
-use iced::widget::{button, column, container, image, text};
+use iced::widget::{button, container, image, text};
 use iced::{Background, Border, Element, Fill, Padding, Shadow, Theme};
 
-use crate::components::ui::scrollbar;
 use crate::i18n::Tr;
 use crate::scanner::types::ServerInfo;
 use crate::styles::{c, is_dark, SANS};
 
 use avatar::{favicon_handle, AvatarSize};
-use item::server_card_content;
+use item::{server_card_content, CARD_HEIGHT};
+use virtual_list::VirtualList;
+
+/// Отступы списка и зазор между карточками (совпадают с прежним `column`).
+const LIST_PADDING: Padding = Padding { top: 12.0, right: 16.0, bottom: 12.0, left: 16.0 };
+const CARD_SPACING: f32 = 9.0;
 
 #[derive(Default)]
 pub struct ResultsList {
@@ -112,20 +117,25 @@ impl ResultsList {
             .into();
         }
 
-        let mut col = column![].spacing(9).padding(Padding::from([12, 16]));
-        for info in &self.items {
-            let addr = info.addr;
-            let content = server_card_content(info, self.avatars_small.get(&addr).cloned(), tr);
-            col = col.push(
+        VirtualList::new(
+            self.items.len(),
+            CARD_HEIGHT,
+            CARD_SPACING,
+            LIST_PADDING,
+            move |i| {
+                let info = &self.items[i];
+                let addr = info.addr;
+                let content = server_card_content(info, self.avatars_small.get(&addr).cloned(), tr);
                 button(content)
                     .on_press(ResultsListMessage::OpenPreview(addr))
                     .style(card_btn_style)
                     .padding(Padding::from([13, 15]))
-                    .width(Fill),
-            );
-        }
-
-        scrollbar(col).into()
+                    .width(Fill)
+                    .height(CARD_HEIGHT)
+                    .into()
+            },
+        )
+        .into()
     }
 }
 

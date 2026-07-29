@@ -11,6 +11,13 @@ use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
 use super::avatar::{build_avatar_icon, AvatarSize};
 use super::ResultsListMessage;
 
+/// Фиксированная высота карточки (вместе с вертикальным паддингом кнопки 2×13).
+///
+/// Виртуализация списка рендерит только видимые строки и потому требует единой
+/// высоты: 58px под контент (аватар 56 + строки MOTD/адреса) + 26px паддинга.
+pub const CARD_HEIGHT: f32 = 84.0;
+const CARD_CONTENT_HEIGHT: f32 = 58.0;
+
 pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Handle>, tr: &'static Tr) -> Element<'a, ResultsListMessage> {
     let (name, description) = split_motd(&info.motd);
     let avatar = build_avatar_icon(&name, &info.edition, favicon, AvatarSize::SMALL, |t: &Theme| {
@@ -65,6 +72,7 @@ pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Hand
 
     row![avatar, Space::new().width(15), left_block, right_block]
         .align_y(Alignment::Center)
+        .height(Fixed(CARD_CONTENT_HEIGHT))
         .into()
 }
 
