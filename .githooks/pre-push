@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs the local quality gate before every push. Enable once per clone with:
+#   git config core.hooksPath .githooks
+# Bypass a single push with: git push --no-verify
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"
