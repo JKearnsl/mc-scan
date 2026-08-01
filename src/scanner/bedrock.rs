@@ -74,3 +74,79 @@ fn parse_motd(raw: &str, addr: SocketAddr, latency_ms: u64) -> Option<ServerInfo
     info.port_v6 = parts.get(11).and_then(|s| s.trim().parse().ok());
     Some(info)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn addr() -> SocketAddr {
+        SocketAddr::from(([127, 0, 0, 1], 19132))
+    }
+
+    /// Wrap a MOTD string in a well-formed unconnected pong:
+    /// `0x1C` + timestamp(8) + GUID(8) + MAGIC(16) + len(u16) + motd.
+    fn pong(motd: &str) -> Vec<u8> {
+        let mut p = vec![0x1C];
+        p.extend_from_slice(&0u64.to_be_bytes());
+        p.extend_from_slice(&0u64.to_be_bytes());
+        p.extend_from_slice(&MAGIC);
+        p.extend_from_slice(&(motd.len() as u16).to_be_bytes());
+        p.extend_from_slice(motd.as_bytes());
+        p
+    }
+
+    #[test]
+    fn parses_full_pong() {
+        let motd = "MCPE;§eDedicated Server;390;1.14.60;5;10;1234567890;Bedrock level;Survival;1;19132;19133";
+        let info = parse_pong(&pong(motd), addr(), 7).expect("should parse");
+        assert_eq!(info.edition, Edition::Bedrock);
+        assert_eq!(info.motd, "Dedicated Server"); // section code stripped
+        assert_eq!(info.protocol, 390);
+        assert_eq!(info.version, "1.14.60");
+        assert_eq!(info.online, 5);
+        assert_eq!(info.max_players, 10);
+        assert_eq!(info.latency_ms, 7);
+        assert_eq!(info.bedrock_edition.as_deref(), Some("MCPE"));
+        assert_eq!(info.server_guid.as_deref(), Some("1234567890"));
+        assert_eq!(info.sub_motd.as_deref(), Some("Bedrock level"));
+        assert_eq!(info.gamemode.as_deref(), Some("Survival"));
+        assert_eq!(info.port_v4, Some(19132));
+        assert_eq!(info.port_v6, Some(19133));
+    }
+
+    #[test]
+    fn parses_minimal_pong_without_optional_fields() {
+        // Only the six required fields; optionals stay None.
+        let info = parse_pong(&pong("MCPE;Hi;390;1.14.60;0;20"), addr(), 0).expect("should parse");
+        assert_eq!(info.motd, "Hi");
+        assert_eq!(info.max_players, 20);
+        assert_eq!(info.server_guid, None);
+        assert_eq!(info.gamemode, None);
+        assert_eq!(info.port_v4, None);
+    }
+
+    #[test]
+    fn rejects_wrong_packet_id() {
+        let mut bytes = pong("MCPE;Hi;390;1.0;0;1");
+        bytes[0] = 0x00;
+        assert!(parse_pong(&bytes, addr(), 0).is_none());
+    }
+
+    #[test]
+    fn rejects_truncated_packet() {
+        assert!(parse_pong(&[0x1C; 10], addr(), 0).is_none());
+    }
+
+    #[test]
+    fn rejects_length_past_end_of_buffer() {
+        let mut bytes = pong("MCPE;Hi;390;1.0;0;1");
+        // Claim a MOTD far longer than what follows.
+        bytes[33..35].copy_from_slice(&9999u16.to_be_bytes());
+        assert!(parse_pong(&bytes, addr(), 0).is_none());
+    }
+
+    #[test]
+    fn rejects_motd_with_too_few_fields() {
+        assert!(parse_motd("MCPE;Hi;390", addr(), 0).is_none());
+    }
+}
