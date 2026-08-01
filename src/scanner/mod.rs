@@ -9,7 +9,20 @@ pub mod types;
 use futures::{Stream, StreamExt, stream};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tracing::trace;
 use types::{Edition, ScanConfig, ServerInfo};
+
+/// Why a probe produced no `ServerInfo`. Splits a network-level miss (host almost
+/// certainly dead/filtered) from a response that arrived but failed to parse
+/// (a possible parser bug or a hostile/non-standard server) — the distinction the
+/// silent `None` used to hide.
+#[derive(Debug)]
+pub(crate) enum Miss {
+    /// No usable connection or response (timeout, refused, unreachable, short read).
+    Unreachable(&'static str),
+    /// Bytes arrived but did not parse as the expected protocol.
+    Unparsed(&'static str),
+}
 
 pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = Option<ServerInfo>> + Send + 'static {
     let timeout_ms = config.timeout_ms.get();
@@ -57,18 +70,24 @@ pub async fn probe_server(
         Edition::Java => {
             let mut info = java::probe(addr, timeout_ms).await?;
             // Query
-            if query_enabled && let Some(q) = query::probe(addr, timeout_ms).await {
-                info.world = q.world;
-                info.plugins = q.plugins;
-                // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
-                if !q.players.is_empty() {
-                    info.samples = q.players;
-                    info.sample_ids.clear();
+            if query_enabled {
+                match query::probe(addr, timeout_ms).await {
+                    Some(q) => {
+                        info.world = q.world;
+                        info.plugins = q.plugins;
+                        // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
+                        if !q.players.is_empty() {
+                            info.samples = q.players;
+                            info.sample_ids.clear();
+                        }
+                    }
+                    None => trace!(%addr, "query enrichment returned nothing"),
                 }
             }
             // Detect online/offline-mode
             if online_mode_check {
                 info.online_mode = login::probe(addr, info.protocol, timeout_ms).await;
+                trace!(%addr, online_mode = ?info.online_mode, "online-mode probe");
             }
             Some(info)
         }

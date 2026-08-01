@@ -1,3 +1,4 @@
+use super::Miss;
 use super::types::{Edition, ModInfo, ServerInfo};
 use serde_json::Value;
 use std::net::SocketAddr;
@@ -5,18 +6,49 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
+use tracing::{debug, trace};
 
 pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
+    match probe_inner(addr, timeout_ms).await {
+        Ok(info) => {
+            debug!(%addr, edition = "java", version = %info.version, online = info.online, "found");
+            Some(info)
+        }
+        // Response arrived but didn't parse: notable (parser bug or odd server).
+        Err(Miss::Unparsed(stage)) => {
+            debug!(%addr, edition = "java", stage, "response did not parse");
+            None
+        }
+        // No/short connection: the common case on a wide scan, kept at trace.
+        Err(Miss::Unreachable(stage)) => {
+            trace!(%addr, edition = "java", stage, "unreachable");
+            None
+        }
+    }
+}
+
+async fn probe_inner(addr: SocketAddr, timeout_ms: u64) -> Result<ServerInfo, Miss> {
     let dur = Duration::from_millis(timeout_ms);
     let start = Instant::now();
 
-    let mut stream = timeout(dur, TcpStream::connect(addr)).await.ok()?.ok()?;
+    let mut stream = timeout(dur, TcpStream::connect(addr))
+        .await
+        .map_err(|_| Miss::Unreachable("connect_timeout"))?
+        .map_err(|_| Miss::Unreachable("connect"))?;
 
     let handshake = build_handshake(&addr.ip().to_string(), addr.port());
-    stream.write_all(&handshake).await.ok()?;
-    stream.write_all(&[0x01, 0x00]).await.ok()?;
+    stream
+        .write_all(&handshake)
+        .await
+        .map_err(|_| Miss::Unreachable("write"))?;
+    stream
+        .write_all(&[0x01, 0x00])
+        .await
+        .map_err(|_| Miss::Unreachable("write"))?;
 
-    let json: Value = timeout(dur, read_response(&mut stream)).await.ok()??;
+    let json: Value = timeout(dur, read_response(&mut stream))
+        .await
+        .map_err(|_| Miss::Unreachable("read_timeout"))??;
     let latency_ms = start.elapsed().as_millis() as u64;
 
     let (samples, sample_ids) = parse_samples(&json["players"]["sample"]);
@@ -34,7 +66,7 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
     info.favicon = json["favicon"].as_str().map(|s| s.to_string());
     info.secure_chat = json["enforcesSecureChat"].as_bool();
     info.mods = parse_mods(&json);
-    Some(info)
+    Ok(info)
 }
 
 fn build_handshake(host: &str, port: u16) -> Vec<u8> {
@@ -58,20 +90,31 @@ fn build_handshake(host: &str, port: u16) -> Vec<u8> {
 /// widened via `as usize`, abort the process on a capacity overflow.
 const MAX_STATUS_BYTES: usize = 4 * 1024 * 1024;
 
-async fn read_response(stream: &mut TcpStream) -> Option<Value> {
+async fn read_response(stream: &mut TcpStream) -> Result<Value, Miss> {
     // Buffer the response so each VarInt byte isn't a separate await/syscall.
     let mut reader = BufReader::new(stream);
-    let _len = read_varint(&mut reader).await?;
-    if read_varint(&mut reader).await? != 0x00 {
-        return None;
+    let _len = read_varint(&mut reader)
+        .await
+        .ok_or(Miss::Unreachable("len"))?;
+    if read_varint(&mut reader)
+        .await
+        .ok_or(Miss::Unreachable("packet_id"))?
+        != 0x00
+    {
+        return Err(Miss::Unparsed("packet_id"));
     }
-    let str_len = read_varint(&mut reader).await?;
+    let str_len = read_varint(&mut reader)
+        .await
+        .ok_or(Miss::Unreachable("str_len"))?;
     if str_len < 0 || str_len as usize > MAX_STATUS_BYTES {
-        return None;
+        return Err(Miss::Unparsed("str_len_bounds"));
     }
     let mut buf = vec![0u8; str_len as usize];
-    reader.read_exact(&mut buf).await.ok()?;
-    serde_json::from_slice(&buf).ok()
+    reader
+        .read_exact(&mut buf)
+        .await
+        .map_err(|_| Miss::Unreachable("body"))?;
+    serde_json::from_slice(&buf).map_err(|_| Miss::Unparsed("json"))
 }
 
 async fn read_varint<R: AsyncRead + Unpin>(reader: &mut R) -> Option<i32> {
@@ -183,7 +226,7 @@ mod tests {
     use tokio::net::TcpListener;
 
     /// Serve `bytes` to a single client and run `read_response` against it.
-    async fn read_response_of(bytes: Vec<u8>) -> Option<Value> {
+    async fn read_response_of(bytes: Vec<u8>) -> Result<Value, Miss> {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let server = tokio::spawn(async move {
@@ -211,14 +254,20 @@ mod tests {
         // len=5, id=0x00, str_len = VarInt(-1) = FF FF FF FF 0F.
         // Without the guard this aborts the process on `vec!` capacity overflow.
         let bytes = vec![0x05, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F];
-        assert!(read_response_of(bytes).await.is_none());
+        assert!(matches!(
+            read_response_of(bytes).await,
+            Err(Miss::Unparsed("str_len_bounds"))
+        ));
     }
 
     #[tokio::test]
     async fn rejects_oversized_status_length() {
         // str_len = VarInt(i32::MAX) = FF FF FF FF 07 (~2 GiB) => rejected by cap.
         let bytes = vec![0x05, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x07];
-        assert!(read_response_of(bytes).await.is_none());
+        assert!(matches!(
+            read_response_of(bytes).await,
+            Err(Miss::Unparsed("str_len_bounds"))
+        ));
     }
 
     #[tokio::test]

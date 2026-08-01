@@ -171,9 +171,22 @@ impl McScan {
                 self.scanned_count = 0;
                 self.scan_id += 1;
                 self.is_scanning = true;
+                tracing::info!(
+                    targets = self.total_targets,
+                    concurrency = config.concurrency.get(),
+                    timeout_ms = config.timeout_ms.get(),
+                    "scan started"
+                );
             }
 
-            Message::ScanStop => self.is_scanning = false,
+            Message::ScanStop => {
+                self.is_scanning = false;
+                tracing::info!(
+                    scanned = self.scanned_count,
+                    found = self.results.count(),
+                    "scan stopped"
+                );
+            }
 
             Message::ServerFound(info) => {
                 let addr = info.addr;
@@ -191,6 +204,11 @@ impl McScan {
             Message::ScanComplete => {
                 self.scanned_count = self.total_targets;
                 self.is_scanning = false;
+                tracing::info!(
+                    targets = self.total_targets,
+                    found = self.results.count(),
+                    "scan complete"
+                );
             }
 
             Message::AddressList(msg) => self.address_list.update(msg),
