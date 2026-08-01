@@ -9,7 +9,8 @@ use crate::components::{address_list, settings};
 use crate::components::address_list::{AddressList, AddressListMessage};
 use crate::components::results_list::{ResultsList, ResultsListMessage};
 use crate::i18n::{self, Language, Tr};
-use crate::scanner::parse::{parse_ip_ranges, parse_ports};
+use crate::scanner::limits::{Concurrency, Ports, TimeoutMs};
+use crate::scanner::parse::parse_ip_ranges;
 use crate::scanner::types::{ScanConfig, ServerInfo};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
 use once_cell::sync::Lazy;
@@ -20,9 +21,6 @@ static RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
         .build()
         .expect("build shared tokio runtime")
 });
-
-// Kept under the fd limit raised in main (>= 10240 on unix) with headroom for the window/GPU.
-const MAX_CONCURRENCY: usize = 8192;
 
 const REFRESH_TIMER_ID: u8 = 0;
 
@@ -95,8 +93,8 @@ impl Default for ScanSettings {
 }
 
 impl ScanSettings {
-    fn java_ports_parsed(&self) -> Vec<u16> { parse_ports(&self.java_ports) }
-    fn bedrock_ports_parsed(&self) -> Vec<u16> { parse_ports(&self.bedrock_ports) }
+    fn java_ports_parsed(&self) -> Ports { Ports::from_input(&self.java_ports) }
+    fn bedrock_ports_parsed(&self) -> Ports { Ports::from_input(&self.bedrock_ports) }
 }
 
 pub struct McScan {
@@ -354,7 +352,7 @@ impl McScan {
     }
 
     fn spawn_probe(&self, addr: SocketAddr, edition: crate::scanner::types::Edition) -> Task<Message> {
-        let timeout = self.settings.timeout_ms.parse::<u64>().unwrap_or(1500);
+        let timeout = TimeoutMs::from_input(&self.settings.timeout_ms).get();
         let query_enabled = self.settings.query_enabled;
         let online_mode_check = self.settings.online_mode_check;
         let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
@@ -384,13 +382,8 @@ impl McScan {
             ranges: self.address_list.values().to_vec(),
             java_ports: self.settings.java_ports_parsed(),
             bedrock_ports: self.settings.bedrock_ports_parsed(),
-            concurrency: self
-                .settings
-                .concurrency
-                .parse()
-                .unwrap_or(1024)
-                .clamp(1, MAX_CONCURRENCY),
-            timeout_ms: self.settings.timeout_ms.parse().unwrap_or(1500).max(100),
+            concurrency: Concurrency::from_input(&self.settings.concurrency),
+            timeout_ms: TimeoutMs::from_input(&self.settings.timeout_ms),
         }
     }
 }

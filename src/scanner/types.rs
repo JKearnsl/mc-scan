@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use ipnet::IpNet;
+use super::limits::{Concurrency, Ports, TimeoutMs};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Edition {
@@ -101,10 +102,10 @@ impl ServerInfo {
 #[derive(Debug, Clone, Hash)]
 pub struct ScanConfig {
     pub ranges: Vec<IpNet>,
-    pub java_ports: Vec<u16>,
-    pub bedrock_ports: Vec<u16>,
-    pub concurrency: usize,
-    pub timeout_ms: u64,
+    pub java_ports: Ports,
+    pub bedrock_ports: Ports,
+    pub concurrency: Concurrency,
+    pub timeout_ms: TimeoutMs,
 }
 
 impl ScanConfig {
@@ -135,10 +136,10 @@ impl Default for ScanConfig {
     fn default() -> Self {
         Self {
             ranges: vec![],
-            java_ports: vec![25565],
-            bedrock_ports: vec![19132],
-            concurrency: 1024,
-            timeout_ms: 1500,
+            java_ports: Ports::from_input("25565"),
+            bedrock_ports: Ports::from_input("19132"),
+            concurrency: Concurrency::default(),
+            timeout_ms: TimeoutMs::default(),
         }
     }
 }
@@ -150,10 +151,10 @@ mod tests {
     fn cfg(ranges: &[&str]) -> ScanConfig {
         ScanConfig {
             ranges: ranges.iter().map(|s| s.parse().unwrap()).collect(),
-            java_ports: vec![25565],
-            bedrock_ports: vec![19132],
-            concurrency: 1,
-            timeout_ms: 1,
+            java_ports: Ports::from_input("25565"),
+            bedrock_ports: Ports::from_input("19132"),
+            concurrency: Concurrency::default(),
+            timeout_ms: TimeoutMs::default(),
         }
     }
 
