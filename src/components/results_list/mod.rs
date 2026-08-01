@@ -17,7 +17,6 @@ use avatar::{favicon_handle, AvatarSize};
 use item::{server_card_content, CARD_HEIGHT};
 use virtual_list::VirtualList;
 
-/// Отступы списка и зазор между карточками (совпадают с прежним `column`).
 const LIST_PADDING: Padding = Padding { top: 12.0, right: 16.0, bottom: 12.0, left: 16.0 };
 const CARD_SPACING: f32 = 9.0;
 
@@ -65,7 +64,6 @@ impl ResultsList {
         }
     }
 
-    /// Returns the new favicon to decode if it changed (the old avatar is cleared).
     pub fn refresh(&mut self, info: ServerInfo) -> Option<String> {
         let addr = info.addr;
         let new_favicon = info.favicon.clone();
