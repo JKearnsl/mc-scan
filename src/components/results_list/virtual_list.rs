@@ -1,14 +1,14 @@
-//! Виртуализированный вертикальный список карточек фиксированной высоты.
+//! A virtualized vertical list of cards of a fixed height.
 //!
-//! В отличие от `column` внутри `scrollable`, строит и раскладывает **только**
-//! видимые в окне карточки, поэтому стоимость кадра не зависит от общего числа
-//! результатов. Сам является скролл-контейнером: держит offset в состоянии,
-//! обрабатывает колесо и перетаскивание ползунка, рисует свой скроллбар.
+//! Unlike `column` inside `scrollable`, it constructs and lays out **only**
+//! cards visible in the window, so the frame cost does not depend on the total number
+//! of results. It is itself a scroll container: it maintains the offset in the state,
+//! handles the wheel and the slider dragging, and draws its own scrollbar.
 //!
-//! Приём с построением контента в `layout` (а не в `view`) заимствован у
-//! `iced::widget::responsive`: `diff` отложен, а реконсиляция дерева состояний
-//! детей делается через `tree.diff_children` уже после того, как известен
-//! видимый диапазон.
+//! The technique of constructing content in `layout` (rather than `view`) is borrowed from
+//! `iced::widget::responsive`: `diff` is deferred, and reconciliation of the state tree of
+//! children is done via `tree.diff_children` after the
+//! visible range is known.
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::renderer::{self, Quad, Renderer as _};
@@ -16,17 +16,14 @@ use iced::advanced::widget::{tree, Tree};
 use iced::advanced::{mouse, Clipboard, Shell, Widget};
 use iced::{Background, Border, Element, Event, Length, Point, Rectangle, Size, Theme};
 
-/// Ширина видимой части ползунка и отступ рельса от края (совпадает со стилем `ui::scrollbar`).
 const SCROLLBAR_WIDTH: f32 = 4.0;
 const SCROLLBAR_MARGIN: f32 = 6.0;
 const MIN_THUMB: f32 = 24.0;
-/// Пиксели прокрутки на одну «строку» колеса.
 const LINE_SCROLL: f32 = 60.0;
 
 #[derive(Default)]
 struct State {
     offset: f32,
-    /// При перетаскивании ползунка — смещение курсора относительно верха ползунка.
     grab: Option<f32>,
 }
 
@@ -36,7 +33,6 @@ pub struct VirtualList<'a, Message> {
     spacing: f32,
     padding: iced::Padding,
     build: Box<dyn Fn(usize) -> Element<'a, Message> + 'a>,
-    /// Видимые карточки, пересобираются в `layout`.
     content: Vec<Element<'a, Message>>,
 }
 
@@ -73,7 +69,6 @@ impl<'a, Message> VirtualList<'a, Message> {
         }
     }
 
-    /// Геометрия ползунка (в абсолютных координатах), если контент не помещается.
     fn scrollbar(&self, bounds: Rectangle, offset: f32) -> Option<Scrollbar> {
         let content_h = self.content_height();
         let max_scroll = (content_h - bounds.height).max(0.0);
@@ -114,7 +109,6 @@ impl Scrollbar {
             height: self.thumb_h,
         }
     }
-    /// Смещение прокрутки для указанного верха ползунка.
     fn offset_for(&self, thumb_top: f32) -> f32 {
         if self.travel <= 0.0 {
             0.0
@@ -137,9 +131,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         Size::new(Length::Fill, Length::Fill)
     }
 
-    fn diff(&self, _tree: &mut Tree) {
-        // Реконсиляция отложена до `layout`, где известен видимый диапазон.
-    }
+    fn diff(&self, _tree: &mut Tree) {}
 
     fn layout(
         &mut self,
@@ -206,7 +198,6 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        // Сначала отдаём событие карточкам (клики/hover по кнопкам).
         for ((child, child_tree), child_layout) in self
             .content
             .iter_mut()
@@ -255,10 +246,8 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
                 let offset = tree.state.downcast_ref::<State>().offset;
                 let Some(sb) = self.scrollbar(bounds, offset) else { return };
                 let grab = if sb.thumb_bounds().contains(pos) {
-                    // Захват ползунка в текущей точке.
                     pos.y - sb.thumb_y
                 } else if pos.x >= sb.x - SCROLLBAR_MARGIN && bounds.contains(pos) {
-                    // Клик по рельсу — центрируем ползунок под курсором и продолжаем как drag.
                     let new_offset = sb.offset_for(pos.y - sb.thumb_h / 2.0);
                     tree.state.downcast_mut::<State>().offset = new_offset;
                     shell.invalidate_layout();
@@ -308,7 +297,6 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
     ) {
         let bounds = layout.bounds();
 
-        // Клип по границам виджета: частично видимые сверху/снизу карточки не вылезают.
         renderer.with_layer(bounds, |renderer| {
             for ((child, child_tree), child_layout) in
                 self.content.iter().zip(&tree.children).zip(layout.children())
