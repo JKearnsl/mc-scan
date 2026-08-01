@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use serde_json::Value;
@@ -59,24 +59,26 @@ fn build_handshake(host: &str, port: u16) -> Vec<u8> {
 const MAX_STATUS_BYTES: usize = 4 * 1024 * 1024;
 
 async fn read_response(stream: &mut TcpStream) -> Option<Value> {
-    let _len = read_varint(stream).await?;
-    if read_varint(stream).await? != 0x00 {
+    // Buffer the response so each VarInt byte isn't a separate await/syscall.
+    let mut reader = BufReader::new(stream);
+    let _len = read_varint(&mut reader).await?;
+    if read_varint(&mut reader).await? != 0x00 {
         return None;
     }
-    let str_len = read_varint(stream).await?;
+    let str_len = read_varint(&mut reader).await?;
     if str_len < 0 || str_len as usize > MAX_STATUS_BYTES {
         return None;
     }
     let mut buf = vec![0u8; str_len as usize];
-    stream.read_exact(&mut buf).await.ok()?;
+    reader.read_exact(&mut buf).await.ok()?;
     serde_json::from_slice(&buf).ok()
 }
 
-async fn read_varint(stream: &mut TcpStream) -> Option<i32> {
+async fn read_varint<R: AsyncRead + Unpin>(reader: &mut R) -> Option<i32> {
     let mut result = 0i32;
     let mut shift = 0u32;
     loop {
-        let byte = stream.read_u8().await.ok()?;
+        let byte = reader.read_u8().await.ok()?;
         result |= ((byte & 0x7F) as i32) << shift;
         if byte & 0x80 == 0 {
             return Some(result);
