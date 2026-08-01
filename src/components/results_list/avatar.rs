@@ -1,11 +1,11 @@
 use base64::Engine;
-use iced::widget::container::Style as ContainerStyle;
-use iced::widget::{container, image, text, Stack};
 use iced::Length::Fixed;
-use iced::{gradient, Background, Border, Color, ContentFit, Element, Theme};
+use iced::widget::container::Style as ContainerStyle;
+use iced::widget::{Stack, container, image, text};
+use iced::{Background, Border, Color, ContentFit, Element, Theme, gradient};
 
 use crate::scanner::types::Edition;
-use crate::styles::{c, is_dark, MONO_SEMIBOLD, SANS_SEMIBOLD};
+use crate::styles::{MONO_SEMIBOLD, SANS_SEMIBOLD, c, is_dark};
 
 /// Dimensions for a `build_avatar` instance.
 /// - `SMALL` is used in the results list,
@@ -46,7 +46,6 @@ impl AvatarSize {
     };
 }
 
-
 pub fn build_avatar_icon<'a, M: 'a>(
     name: &str,
     edition: &Edition,
@@ -54,8 +53,13 @@ pub fn build_avatar_icon<'a, M: 'a>(
     size: AvatarSize,
     ring: impl Fn(&Theme) -> Color + 'a,
 ) -> Element<'a, M> {
-    let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('?')
-        .to_uppercase().next().unwrap_or('?');
+    let first = name
+        .chars()
+        .find(|c| c.is_alphanumeric())
+        .unwrap_or('?')
+        .to_uppercase()
+        .next()
+        .unwrap_or('?');
 
     let (dark_start, dark_end, dark_letter) = palette(name);
     let (light_start, light_end, light_letter) = light_variant(dark_letter);
@@ -70,7 +74,11 @@ pub fn build_avatar_icon<'a, M: 'a>(
         )
         .style(move |t: &Theme| ContainerStyle {
             border: Border {
-                color: if is_dark(t) { c("#2A3240") } else { c("#DDE2E8") },
+                color: if is_dark(t) {
+                    c("#2A3240")
+                } else {
+                    c("#DDE2E8")
+                },
                 width: 1.0,
                 radius: size.letter_radius.into(),
             },
@@ -84,7 +92,11 @@ pub fn build_avatar_icon<'a, M: 'a>(
                 .size(size.letter_font)
                 .font(SANS_SEMIBOLD)
                 .style(move |t: &Theme| text::Style {
-                    color: Some(if is_dark(t) { dark_letter } else { light_letter }),
+                    color: Some(if is_dark(t) {
+                        dark_letter
+                    } else {
+                        light_letter
+                    }),
                 }),
         )
         .style(move |t: &Theme| {
@@ -113,7 +125,7 @@ pub fn build_avatar_icon<'a, M: 'a>(
     };
 
     let (badge_bg, badge_text_col, badge_letter) = match edition {
-        Edition::Java    => (c("#D99A3C"), c("#08110B"), "J"),
+        Edition::Java => (c("#D99A3C"), c("#08110B"), "J"),
         Edition::Bedrock => (c("#13A884"), c("#04120E"), "B"),
     };
 
@@ -122,7 +134,11 @@ pub fn build_avatar_icon<'a, M: 'a>(
             .size(size.badge_font)
             .font(MONO_SEMIBOLD)
             .style(move |t: &Theme| text::Style {
-                color: Some(if is_dark(t) { badge_text_col } else { Color::WHITE }),
+                color: Some(if is_dark(t) {
+                    badge_text_col
+                } else {
+                    Color::WHITE
+                }),
             }),
     )
     .style(move |_: &Theme| ContainerStyle {
@@ -168,7 +184,6 @@ pub fn build_avatar_icon<'a, M: 'a>(
         .into()
 }
 
-
 pub fn favicon_handle(favicon: &str, size: AvatarSize) -> Option<image::Handle> {
     rounded_favicon(favicon, size.inner, size.letter_radius)
 }
@@ -180,7 +195,6 @@ fn decode_favicon(favicon: &str) -> Option<Vec<u8>> {
     }
     base64::engine::general_purpose::STANDARD.decode(b64).ok()
 }
-
 
 fn rounded_favicon(favicon: &str, display: f32, display_radius: f32) -> Option<image::Handle> {
     use ::image::imageops::FilterType;
@@ -261,7 +275,6 @@ fn palette(name: &str) -> (Color, Color, Color) {
     (HEX_TO_COLOR(gs), HEX_TO_COLOR(ge), HEX_TO_COLOR(lc))
 }
 
-
 fn light_variant(dark_letter: Color) -> (Color, Color, Color) {
     let (h, s, _) = rgb_to_hsl(dark_letter);
     let bg_s = (s * 0.85).min(1.0);
@@ -306,5 +319,10 @@ fn hsl_to_color(h: f32, s: f32, l: f32) -> Color {
         _ => (c, 0.0, x),
     };
     let m = l - c / 2.0;
-    Color { r: r + m, g: g + m, b: b + m, a: 1.0 }
+    Color {
+        r: r + m,
+        g: g + m,
+        b: b + m,
+        a: 1.0,
+    }
 }

@@ -1,12 +1,11 @@
+use super::types::{Edition, ServerInfo};
 use std::net::SocketAddr;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
-use super::types::{Edition, ServerInfo};
 
 const MAGIC: [u8; 16] = [
-    0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE,
-    0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78,
+    0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78,
 ];
 
 pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
@@ -56,7 +55,12 @@ fn parse_motd(raw: &str, addr: SocketAddr, latency_ms: u64) -> Option<ServerInfo
     if parts.len() < 6 {
         return None;
     }
-    let get = |i: usize| parts.get(i).map(|s| s.to_string()).filter(|s| !s.is_empty());
+    let get = |i: usize| {
+        parts
+            .get(i)
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+    };
 
     let mut info = ServerInfo::base(addr, Edition::Bedrock);
     info.motd = super::strip_section_codes(parts[1]);

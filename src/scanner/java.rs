@@ -1,10 +1,10 @@
+use super::types::{Edition, ModInfo, ServerInfo};
+use serde_json::Value;
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
-use serde_json::Value;
-use super::types::{Edition, ModInfo, ServerInfo};
 
 pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
     let dur = Duration::from_millis(timeout_ms);
@@ -133,7 +133,10 @@ fn parse_mods(json: &Value) -> Vec<ModInfo> {
                     .as_str()
                     .or_else(|| m["version"].as_str())
                     .unwrap_or("");
-                Some(ModInfo { id: id.to_string(), version: version.to_string() })
+                Some(ModInfo {
+                    id: id.to_string(),
+                    version: version.to_string(),
+                })
             })
             .collect();
     }
@@ -143,7 +146,10 @@ fn parse_mods(json: &Value) -> Vec<ModInfo> {
             .filter_map(|m| {
                 let id = m["modid"].as_str()?;
                 let version = m["version"].as_str().unwrap_or("");
-                Some(ModInfo { id: id.to_string(), version: version.to_string() })
+                Some(ModInfo {
+                    id: id.to_string(),
+                    version: version.to_string(),
+                })
             })
             .collect();
     }
@@ -155,11 +161,13 @@ fn parse_description(v: &Value) -> String {
         Value::String(s) => super::strip_section_codes(s),
         Value::Array(arr) => arr.iter().map(parse_description).collect(),
         Value::Object(map) => {
-            let text = map.get("text")
+            let text = map
+                .get("text")
                 .and_then(|v| v.as_str())
                 .map(super::strip_section_codes)
                 .unwrap_or_default();
-            let extras = map.get("extra")
+            let extras = map
+                .get("extra")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().map(parse_description).collect::<String>())
                 .unwrap_or_default();
@@ -216,7 +224,9 @@ mod tests {
     #[tokio::test]
     async fn parses_within_cap() {
         let json = br#"{"players":{"online":3,"max":20}}"#;
-        let v = read_response_of(framed_status(json)).await.expect("should parse");
+        let v = read_response_of(framed_status(json))
+            .await
+            .expect("should parse");
         assert_eq!(v["players"]["online"].as_u64(), Some(3));
     }
 
@@ -224,7 +234,10 @@ mod tests {
     fn description_array_is_concatenated() {
         use serde_json::json;
         assert_eq!(parse_description(&json!(["a", "b"])), "ab");
-        assert_eq!(parse_description(&json!([{"text": "x"}, {"text": "y"}])), "xy");
+        assert_eq!(
+            parse_description(&json!([{"text": "x"}, {"text": "y"}])),
+            "xy"
+        );
     }
 
     #[test]

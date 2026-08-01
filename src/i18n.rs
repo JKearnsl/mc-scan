@@ -9,10 +9,15 @@ pub enum Language {
 impl Language {
     pub fn from_locale(locale: &str) -> Self {
         let l = locale.to_lowercase();
-        if l.starts_with("ru") { Language::Russian }
-        else if l.starts_with("zh") { Language::Chinese }
-        else if l.starts_with("ja") { Language::Japanese }
-        else { Language::English }
+        if l.starts_with("ru") {
+            Language::Russian
+        } else if l.starts_with("zh") {
+            Language::Chinese
+        } else if l.starts_with("ja") {
+            Language::Japanese
+        } else {
+            Language::English
+        }
     }
 
     pub fn detect() -> Self {
@@ -285,9 +290,9 @@ pub static JA: Tr = Tr {
 
 pub fn tr(lang: Language) -> &'static Tr {
     match lang {
-        Language::English  => &EN,
-        Language::Russian  => &RU,
-        Language::Chinese  => &ZH,
+        Language::English => &EN,
+        Language::Russian => &RU,
+        Language::Chinese => &ZH,
         Language::Japanese => &JA,
     }
 }

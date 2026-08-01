@@ -22,7 +22,10 @@ const APP_ICON: &[u8] = include_bytes!("../assets/icon.png");
 #[cfg(unix)]
 fn raise_fd_limit() {
     unsafe {
-        let mut lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+        let mut lim = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
         if libc::getrlimit(libc::RLIMIT_NOFILE, &mut lim) != 0 || lim.rlim_cur >= lim.rlim_max {
             return;
         }
@@ -54,8 +57,14 @@ fn main() -> iced::Result {
         .font(PLEX_MONO_SEMIBOLD)
         .default_font(Font::with_name("IBM Plex Sans"))
         .window(window::Settings {
-            size: Size { width: 1060.0, height: 620.0 },
-            min_size: Some(Size { width: 780.0, height: 480.0 }),
+            size: Size {
+                width: 1060.0,
+                height: 620.0,
+            },
+            min_size: Some(Size {
+                width: 780.0,
+                height: 480.0,
+            }),
             resizable: true,
             icon: window::icon::from_file_data(APP_ICON, None).ok(),
             platform_specific: window::settings::PlatformSpecific {

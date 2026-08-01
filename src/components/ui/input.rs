@@ -1,8 +1,8 @@
-use iced::widget::{row, text, text_input};
 use iced::Length::Fixed;
+use iced::widget::{row, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
-use crate::styles::{c, is_dark, MONO, SANS};
+use crate::styles::{MONO, SANS, c, is_dark};
 
 pub fn labeled_input<'a, M: Clone + 'a>(
     label: &'a str,
@@ -11,13 +11,25 @@ pub fn labeled_input<'a, M: Clone + 'a>(
     on_change: impl Fn(String) -> M + 'a,
     error: bool,
 ) -> Element<'a, M> {
-    let style: fn(&Theme, _) -> _ = if error { text_input_error_style } else { text_input_style };
+    let style: fn(&Theme, _) -> _ = if error {
+        text_input_error_style
+    } else {
+        text_input_style
+    };
     row![
-        text(label).size(13).font(SANS).width(Fixed(90.0)).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
-            }
-        }),
+        text(label)
+            .size(13)
+            .font(SANS)
+            .width(Fixed(90.0))
+            .style(|t: &Theme| {
+                iced::widget::text::Style {
+                    color: Some(if is_dark(t) {
+                        c("#A2ABBA")
+                    } else {
+                        c("#3A4049")
+                    }),
+                }
+            }),
         text_input(placeholder, value)
             .on_input(on_change)
             .padding(Padding::from([7, 10]))
@@ -49,7 +61,12 @@ fn text_input_style(
         icon: Color::TRANSPARENT,
         placeholder: if dark { c("#5C636F") } else { c("#A0A7B1") },
         value: if dark { c("#E8EBF0") } else { c("#161A20") },
-        selection: Color { r: 0.239, g: 0.839, b: 0.549, a: 0.25 },
+        selection: Color {
+            r: 0.239,
+            g: 0.839,
+            b: 0.549,
+            a: 0.25,
+        },
     }
 }
 
@@ -71,6 +88,11 @@ fn text_input_error_style(
         icon: Color::TRANSPARENT,
         placeholder: if dark { c("#5C636F") } else { c("#A0A7B1") },
         value: danger,
-        selection: Color { r: 0.898, g: 0.376, b: 0.302, a: 0.25 },
+        selection: Color {
+            r: 0.898,
+            g: 0.376,
+            b: 0.302,
+            a: 0.25,
+        },
     }
 }
