@@ -23,6 +23,7 @@ static RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 });
 
 const REFRESH_TIMER_ID: u8 = 0;
+const THEME_SUB_ID: u8 = 1;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModalKind {
@@ -52,7 +53,8 @@ pub enum Message {
     CloseModal,
     RangesEditorAction(iced::widget::text_editor::Action),
     ConfirmAddRanges,
-    SetTheme(bool),
+    SetThemePref(crate::config::ThemePref),
+    SystemColorScheme(bool),
     SetLanguage(Language),
     CopyAddress,
     CopiedReset,
@@ -113,6 +115,9 @@ pub struct McScan {
     pub(crate) scanned_count: usize,
     pub(crate) modal: ModalKind,
     pub(crate) ranges_editor: iced::widget::text_editor::Content,
+    pub(crate) theme_pref: crate::config::ThemePref,
+    /// Resolved from `theme_pref`: for `System` it tracks the OS scheme reported
+    /// by the color-scheme subscription; otherwise it is fixed by the preference.
     pub(crate) is_dark: bool,
     pub(crate) language: Language,
     pub(crate) copied: bool,
@@ -127,6 +132,11 @@ impl McScan {
             crate::config::language_from_code(&cfg.language).unwrap_or_else(Language::detect);
         let mut address_list = AddressList::default();
         address_list.push_ranges(parse_ip_ranges(&cfg.ranges.join("\n")));
+
+        let theme_pref = crate::config::ThemePref::from_code(&cfg.theme);
+        // `System` starts dark and is corrected by the color-scheme subscription's
+        // first emission; the explicit prefs are already final.
+        let is_dark = theme_pref != crate::config::ThemePref::Light;
 
         let app = Self {
             wid: None,
@@ -148,7 +158,8 @@ impl McScan {
             scanned_count: 0,
             modal: ModalKind::None,
             ranges_editor: iced::widget::text_editor::Content::new(),
-            is_dark: cfg.is_dark,
+            theme_pref,
+            is_dark,
             language,
             copied: false,
             refresh_index: 0,
@@ -176,7 +187,7 @@ impl McScan {
             timeout_ms: self.settings.timeout_ms.clone(),
             query_enabled: self.settings.query_enabled,
             online_mode_check: self.settings.online_mode_check,
-            is_dark: self.is_dark,
+            theme: self.theme_pref.code().to_string(),
             language: crate::config::language_code(self.language).to_string(),
         });
     }
@@ -301,9 +312,22 @@ impl McScan {
                 self.persist();
             }
 
-            Message::SetTheme(dark) => {
-                self.is_dark = dark;
+            Message::SetThemePref(pref) => {
+                self.theme_pref = pref;
+                match pref {
+                    crate::config::ThemePref::Dark => self.is_dark = true,
+                    crate::config::ThemePref::Light => self.is_dark = false,
+                    // Leave is_dark until the subscription reports the OS scheme.
+                    crate::config::ThemePref::System => {}
+                }
                 self.persist();
+            }
+
+            Message::SystemColorScheme(dark) => {
+                tracing::debug!(dark, "OS color scheme");
+                if self.theme_pref == crate::config::ThemePref::System {
+                    self.is_dark = dark;
+                }
             }
             Message::SetLanguage(lang) => {
                 self.language = lang;
@@ -398,7 +422,14 @@ impl McScan {
             Subscription::none()
         };
 
-        Subscription::batch([scan_sub, refresh_sub])
+        // Only follow the OS scheme while the user is on "System".
+        let theme_sub = if self.theme_pref == crate::config::ThemePref::System {
+            Subscription::run_with(THEME_SUB_ID, system_color_scheme_stream)
+        } else {
+            Subscription::none()
+        };
+
+        Subscription::batch([scan_sub, refresh_sub, theme_sub])
     }
 
     pub fn theme(&self) -> Theme {
@@ -525,6 +556,16 @@ fn refresh_timer_stream(_: &u8) -> BoxStream<'static, Message> {
         }
     });
     Box::pin(rx)
+}
+
+// Emits the OS color scheme now and whenever it changes. `NoPreference` (unknown
+// or unset) is treated as dark to match the app's dark-first palette.
+fn system_color_scheme_stream(_: &u8) -> BoxStream<'static, Message> {
+    use mundy::{ColorScheme, Interest, Preferences};
+    Box::pin(
+        Preferences::stream(Interest::ColorScheme)
+            .map(|p| Message::SystemColorScheme(p.color_scheme != ColorScheme::Light)),
+    )
 }
 
 struct ScanKey {

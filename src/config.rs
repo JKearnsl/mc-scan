@@ -19,7 +19,8 @@ pub struct Config {
     pub timeout_ms: String,
     pub query_enabled: bool,
     pub online_mode_check: bool,
-    pub is_dark: bool,
+    /// Theme preference code ("system"/"dark"/"light").
+    pub theme: String,
     /// Language code ("en"/"ru"/"zh"/"ja"); empty means "detect from locale".
     pub language: String,
 }
@@ -34,8 +35,37 @@ impl Default for Config {
             timeout_ms: "1500".into(),
             query_enabled: true,
             online_mode_check: false,
-            is_dark: true,
+            theme: ThemePref::System.code().into(),
             language: String::new(),
+        }
+    }
+}
+
+/// The user's theme choice. `System` follows the OS color scheme; the other two
+/// pin it regardless of the OS.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum ThemePref {
+    #[default]
+    System,
+    Dark,
+    Light,
+}
+
+impl ThemePref {
+    pub fn code(self) -> &'static str {
+        match self {
+            ThemePref::System => "system",
+            ThemePref::Dark => "dark",
+            ThemePref::Light => "light",
+        }
+    }
+
+    /// Parse a persisted code, defaulting to `System` for anything unrecognized.
+    pub fn from_code(code: &str) -> Self {
+        match code {
+            "dark" => ThemePref::Dark,
+            "light" => ThemePref::Light,
+            _ => ThemePref::System,
         }
     }
 }
@@ -100,11 +130,20 @@ mod tests {
     }
 
     #[test]
+    fn theme_pref_code_round_trips() {
+        for pref in [ThemePref::System, ThemePref::Dark, ThemePref::Light] {
+            assert_eq!(ThemePref::from_code(pref.code()), pref);
+        }
+        assert_eq!(ThemePref::from_code("nonsense"), ThemePref::System);
+        assert_eq!(ThemePref::default(), ThemePref::System);
+    }
+
+    #[test]
     fn config_survives_a_json_round_trip() {
         let cfg = Config {
             ranges: vec!["10.0.0.0/24".into(), "1.2.3.4/32".into()],
             concurrency: "2048".into(),
-            is_dark: false,
+            theme: "light".into(),
             language: "ru".into(),
             ..Config::default()
         };
@@ -112,16 +151,16 @@ mod tests {
         let back: Config = serde_json::from_str(&json).unwrap();
         assert_eq!(back.ranges, cfg.ranges);
         assert_eq!(back.concurrency, "2048");
-        assert!(!back.is_dark);
+        assert_eq!(back.theme, "light");
         assert_eq!(back.language, "ru");
     }
 
     #[test]
     fn partial_json_fills_defaults() {
         // A file written by an older build with only some keys still loads.
-        let back: Config = serde_json::from_str(r#"{"is_dark": false}"#).unwrap();
-        assert!(!back.is_dark);
+        let back: Config = serde_json::from_str(r#"{"query_enabled": false}"#).unwrap();
+        assert!(!back.query_enabled);
         assert_eq!(back.java_ports, "25565"); // default filled in
-        assert!(back.query_enabled);
+        assert_eq!(back.theme, "system"); // default filled in
     }
 }

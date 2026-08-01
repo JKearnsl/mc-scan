@@ -33,6 +33,8 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 # graph, which panics iced's zbus-based OS-theme detection (it runs outside a
 # tokio context). async-std keeps zbus on its default async-io reactor.
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
+# Already in the tree via iced; used directly to follow the OS color scheme.
+mundy = { version = "0.2.3", default-features = false, features = ["color-scheme", "async-io"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
