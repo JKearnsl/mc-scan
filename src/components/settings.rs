@@ -4,35 +4,33 @@ use iced::widget::{column, row};
 
 use crate::app::{McScan, Message};
 use crate::components::ui::{BtnVariant, btn, checkbox, dialog, labeled_input, section_label};
+use crate::config::ThemePref;
 use crate::i18n::Language;
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let tr = app.tr();
-    let is_dark = app.is_dark;
+    let theme = app.theme_pref;
     let lang = app.language;
+
+    let theme_btn = |label: &'static str, pref: ThemePref| {
+        let variant = if theme == pref {
+            BtnVariant::Primary(label)
+        } else {
+            BtnVariant::Secondary(label)
+        };
+        btn(variant, Message::SetThemePref(pref))
+    };
 
     let body = column![
         Space::new().height(16),
         section_label(tr.theme),
         Space::new().height(8),
         row![
-            btn(
-                if is_dark {
-                    BtnVariant::Primary(tr.dark)
-                } else {
-                    BtnVariant::Secondary(tr.dark)
-                },
-                Message::SetTheme(true),
-            ),
+            theme_btn(tr.system, ThemePref::System),
             Space::new().width(8),
-            btn(
-                if !is_dark {
-                    BtnVariant::Primary(tr.light)
-                } else {
-                    BtnVariant::Secondary(tr.light)
-                },
-                Message::SetTheme(false),
-            ),
+            theme_btn(tr.dark, ThemePref::Dark),
+            Space::new().width(8),
+            theme_btn(tr.light, ThemePref::Light),
         ],
         Space::new().height(16),
         section_label(tr.language),
