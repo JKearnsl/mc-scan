@@ -2,6 +2,7 @@ mod java;
 mod bedrock;
 mod query;
 mod login;
+pub mod limits;
 pub mod parse;
 pub mod types;
 
@@ -11,8 +12,8 @@ use futures::{stream, Stream, StreamExt};
 use types::{Edition, ScanConfig, ServerInfo};
 
 pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = Option<ServerInfo>> + Send + 'static {
-    let timeout_ms = config.timeout_ms;
-    let concurrency = config.concurrency;
+    let timeout_ms = config.timeout_ms.get();
+    let concurrency = config.concurrency.get();
 
     let mut ports: Vec<(u16, Edition)> =
         Vec::with_capacity(config.java_ports.len() + config.bedrock_ports.len());
