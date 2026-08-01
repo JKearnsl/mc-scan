@@ -226,4 +226,51 @@ mod tests {
         assert_eq!(parse_description(&json!(["a", "b"])), "ab");
         assert_eq!(parse_description(&json!([{"text": "x"}, {"text": "y"}])), "xy");
     }
+
+    #[test]
+    fn description_strips_codes_and_walks_extra() {
+        use serde_json::json;
+        assert_eq!(parse_description(&json!("§aHello")), "Hello");
+        assert_eq!(
+            parse_description(&json!({"text": "A", "extra": [{"text": "B"}, "C"]})),
+            "ABC"
+        );
+        assert_eq!(parse_description(&json!(42)), "");
+    }
+
+    async fn varint_roundtrip(v: i32) -> Option<i32> {
+        let mut buf = Vec::new();
+        write_varint(&mut buf, v);
+        let mut slice: &[u8] = &buf;
+        read_varint(&mut slice).await
+    }
+
+    #[tokio::test]
+    async fn varint_roundtrips_across_boundaries() {
+        for v in [0, 1, 127, 128, 255, 2097151, i32::MAX, -1, i32::MIN] {
+            assert_eq!(varint_roundtrip(v).await, Some(v), "roundtrip {v}");
+        }
+    }
+
+    #[test]
+    fn write_varint_matches_protocol_encoding() {
+        let enc = |v| {
+            let mut b = Vec::new();
+            write_varint(&mut b, v);
+            b
+        };
+        assert_eq!(enc(0), [0x00]);
+        assert_eq!(enc(1), [0x01]);
+        assert_eq!(enc(127), [0x7F]);
+        assert_eq!(enc(128), [0x80, 0x01]);
+        assert_eq!(enc(300), [0xAC, 0x02]);
+        assert_eq!(enc(-1), [0xFF, 0xFF, 0xFF, 0xFF, 0x0F]);
+    }
+
+    #[tokio::test]
+    async fn read_varint_rejects_overlong_encoding() {
+        // Six continuation bytes exceed the 5-byte VarInt limit.
+        let mut slice: &[u8] = &[0x80, 0x80, 0x80, 0x80, 0x80, 0x01];
+        assert!(read_varint(&mut slice).await.is_none());
+    }
 }

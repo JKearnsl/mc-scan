@@ -102,4 +102,39 @@ mod tests {
         assert!(nets("10.0.0.0-2001:db8::1").is_empty());
         assert!(nets("10.0.0.5-10.0.0.0").is_empty());
     }
+
+    #[test]
+    fn single_address_becomes_host_route() {
+        assert_eq!(nets("255.255.255.255"), vec!["255.255.255.255/32".parse().unwrap()]);
+        assert_eq!(nets("::1"), vec!["::1/128".parse().unwrap()]);
+    }
+
+    #[test]
+    fn cidr_passes_through_unchanged() {
+        assert_eq!(nets("192.168.0.0/16"), vec!["192.168.0.0/16".parse().unwrap()]);
+        assert_eq!(nets("0.0.0.0/0"), vec!["0.0.0.0/0".parse().unwrap()]);
+    }
+
+    #[test]
+    fn whole_ipv4_space_range_collapses_to_default_route() {
+        assert_eq!(nets("0.0.0.0 - 255.255.255.255"), vec!["0.0.0.0/0".parse().unwrap()]);
+    }
+
+    #[test]
+    fn equal_bounds_range_is_a_single_host() {
+        assert_eq!(nets("10.0.0.7-10.0.0.7"), vec!["10.0.0.7/32".parse().unwrap()]);
+    }
+
+    #[test]
+    fn blank_and_unparsable_lines_are_skipped() {
+        assert!(nets("\n   \nnot-an-ip\n").is_empty());
+        // Valid lines survive alongside junk ones.
+        assert_eq!(nets("garbage\n10.0.0.1\n"), vec!["10.0.0.1/32".parse().unwrap()]);
+    }
+
+    #[test]
+    fn parse_ports_filters_out_of_range_and_garbage() {
+        assert_eq!(parse_ports("25565, 19132 , 70000, x"), vec![25565, 19132]);
+        assert!(parse_ports("").is_empty());
+    }
 }

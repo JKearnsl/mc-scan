@@ -94,3 +94,30 @@ pub(super) fn strip_section_codes(s: &str) -> String {
     }
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::strip_section_codes;
+
+    #[test]
+    fn strips_color_and_format_codes() {
+        assert_eq!(strip_section_codes("§aHello §lWorld"), "Hello World");
+    }
+
+    #[test]
+    fn passes_through_text_without_codes() {
+        assert_eq!(strip_section_codes("plain text"), "plain text");
+    }
+
+    #[test]
+    fn drops_a_dangling_section_sign() {
+        // A trailing `§` with no following char is consumed, not emitted.
+        assert_eq!(strip_section_codes("abc§"), "abc");
+    }
+
+    #[test]
+    fn local_bind_addr_matches_target_family() {
+        assert_eq!(super::local_bind_addr(&"127.0.0.1:1".parse().unwrap()), "0.0.0.0:0");
+        assert_eq!(super::local_bind_addr(&"[::1]:1".parse().unwrap()), "[::]:0");
+    }
+}
