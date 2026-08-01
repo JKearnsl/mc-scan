@@ -1,5 +1,6 @@
 mod app;
 mod components;
+mod export;
 mod i18n;
 mod scanner;
 mod styles;
