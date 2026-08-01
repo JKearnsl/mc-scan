@@ -121,19 +121,35 @@ pub struct McScan {
 
 impl McScan {
     pub fn init() -> (Self, Task<Message>) {
+        let cfg = crate::config::load().unwrap_or_default();
+
+        let language =
+            crate::config::language_from_code(&cfg.language).unwrap_or_else(Language::detect);
+        let mut address_list = AddressList::default();
+        address_list.push_ranges(parse_ip_ranges(&cfg.ranges.join("\n")));
+
         let app = Self {
             wid: None,
             results: ResultsList::default(),
-            address_list: AddressList::default(),
-            settings: ScanSettings::default(),
+            address_list,
+            settings: ScanSettings {
+                java_ports: cfg.java_ports,
+                bedrock_ports: cfg.bedrock_ports,
+                concurrency: cfg.concurrency,
+                timeout_ms: cfg.timeout_ms,
+                java_ports_error: false,
+                bedrock_ports_error: false,
+                query_enabled: cfg.query_enabled,
+                online_mode_check: cfg.online_mode_check,
+            },
             is_scanning: false,
             scan_id: 0,
             total_targets: 0,
             scanned_count: 0,
             modal: ModalKind::None,
             ranges_editor: iced::widget::text_editor::Content::new(),
-            is_dark: true,
-            language: Language::detect(),
+            is_dark: cfg.is_dark,
+            language,
             copied: false,
             refresh_index: 0,
         };
@@ -141,6 +157,28 @@ impl McScan {
             app,
             Task::discard(window::latest()).map(Message::WindowInitialized),
         )
+    }
+
+    /// Persist the settings that should survive a restart (ranges, ports, theme,
+    /// language, toggles). Best-effort; called at natural boundaries rather than
+    /// on every keystroke.
+    fn persist(&self) {
+        crate::config::save(&crate::config::Config {
+            ranges: self
+                .address_list
+                .values()
+                .iter()
+                .map(|n| n.to_string())
+                .collect(),
+            java_ports: self.settings.java_ports.clone(),
+            bedrock_ports: self.settings.bedrock_ports.clone(),
+            concurrency: self.settings.concurrency.clone(),
+            timeout_ms: self.settings.timeout_ms.clone(),
+            query_enabled: self.settings.query_enabled,
+            online_mode_check: self.settings.online_mode_check,
+            is_dark: self.is_dark,
+            language: crate::config::language_code(self.language).to_string(),
+        });
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -177,6 +215,7 @@ impl McScan {
                     timeout_ms = config.timeout_ms.get(),
                     "scan started"
                 );
+                self.persist();
             }
 
             Message::ScanStop => {
@@ -211,7 +250,13 @@ impl McScan {
                 );
             }
 
-            Message::AddressList(msg) => self.address_list.update(msg),
+            Message::AddressList(msg) => {
+                let ranges_changed = matches!(msg, AddressListMessage::RemoveClicked(_));
+                self.address_list.update(msg);
+                if ranges_changed {
+                    self.persist();
+                }
+            }
 
             Message::ResultsList(msg) => match msg {
                 ResultsListMessage::OpenPreview(addr) => {
@@ -241,6 +286,8 @@ impl McScan {
             Message::CloseModal => {
                 self.modal = ModalKind::None;
                 self.copied = false;
+                // Persists edits made in the settings modal (ports, timeout, toggles).
+                self.persist();
             }
 
             Message::RangesEditorAction(action) => self.ranges_editor.perform(action),
@@ -251,10 +298,17 @@ impl McScan {
                 self.address_list.push_ranges(ranges);
                 self.ranges_editor = iced::widget::text_editor::Content::new();
                 self.modal = ModalKind::None;
+                self.persist();
             }
 
-            Message::SetTheme(dark) => self.is_dark = dark,
-            Message::SetLanguage(lang) => self.language = lang,
+            Message::SetTheme(dark) => {
+                self.is_dark = dark;
+                self.persist();
+            }
+            Message::SetLanguage(lang) => {
+                self.language = lang;
+                self.persist();
+            }
 
             Message::CopyAddress => {
                 if let ModalKind::ServerPreview(addr) = &self.modal {
