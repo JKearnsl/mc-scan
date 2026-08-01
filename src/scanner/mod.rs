@@ -57,15 +57,15 @@ pub async fn probe_server(
         Edition::Java => {
             let mut info = java::probe(addr, timeout_ms).await?;
             // Query
-            if query_enabled {
-                if let Some(q) = query::probe(addr, timeout_ms).await {
-                    info.world = q.world;
-                    info.plugins = q.plugins;
-                    // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
-                    if !q.players.is_empty() {
-                        info.samples = q.players;
-                        info.sample_ids.clear();
-                    }
+            if query_enabled
+                && let Some(q) = query::probe(addr, timeout_ms).await
+            {
+                info.world = q.world;
+                info.plugins = q.plugins;
+                // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
+                if !q.players.is_empty() {
+                    info.samples = q.players;
+                    info.sample_ids.clear();
                 }
             }
             // Detect online/offline-mode

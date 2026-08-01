@@ -18,16 +18,11 @@ pub enum AddressListMessage {
     ScrollChanged(bool),
 }
 
+#[derive(Default)]
 pub struct AddressList {
     values: Vec<IpNet>,
     hover_index: Option<usize>,
     is_scrollable: bool,
-}
-
-impl Default for AddressList {
-    fn default() -> Self {
-        Self { values: Vec::new(), hover_index: None, is_scrollable: false }
-    }
 }
 
 impl AddressList {

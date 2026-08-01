@@ -91,9 +91,7 @@ impl ResultsList {
         let addr = info.addr;
         let favicon = info.favicon.take();
         {
-            let Some(&idx) = self.index.get(&addr) else {
-                return None;
-            };
+            let &idx = self.index.get(&addr)?;
             let s = &mut self.items[idx];
             s.online = info.online;
             s.max_players = info.max_players;
@@ -201,7 +199,7 @@ pub(crate) fn parse_version(raw: &str) -> (Option<String>, String) {
     if let Some(pos) = raw.find(' ') {
         let prefix = &raw[..pos];
         let rest = raw[pos + 1..].trim();
-        if !prefix.is_empty() && prefix.chars().next().map_or(false, |c| c.is_ascii_alphabetic()) {
+        if !prefix.is_empty() && prefix.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) {
             return (Some(prefix.to_string()), rest.to_string());
         }
     }

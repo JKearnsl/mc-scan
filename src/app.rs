@@ -434,15 +434,15 @@ fn build_scan_stream(key: &ScanKey) -> BoxStream<'static, Message> {
             let mut scanned = 0usize;
             while let Some(maybe_info) = stream.next().await {
                 scanned += 1;
-                if let Some(info) = maybe_info {
-                    if tx.unbounded_send(Message::ServerFound(info)).is_err() {
-                        return;
-                    }
+                if let Some(info) = maybe_info
+                    && tx.unbounded_send(Message::ServerFound(info)).is_err()
+                {
+                    return;
                 }
-                if scanned % 512 == 0 {
-                    if tx.unbounded_send(Message::ScanProgress(scanned)).is_err() {
-                        return;
-                    }
+                if scanned.is_multiple_of(512)
+                    && tx.unbounded_send(Message::ScanProgress(scanned)).is_err()
+                {
+                    return;
                 }
             }
             let _ = tx.unbounded_send(Message::ScanComplete);
