@@ -23,6 +23,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             }),
         Space::new().height(12),
         textarea(&app.ranges_editor, Message::RangesEditorAction, 160.0),
+        rejected_notice(app),
         Space::new().height(16),
         row![
             btn(BtnVariant::Danger(tr.cancel), Message::CloseModal),
@@ -39,4 +40,31 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         540.0,
         body.into(),
     )
+}
+
+/// Warns about input lines the last confirm couldn't parse (they are left in the
+/// editor for correction). Collapses to nothing when there is nothing to report.
+fn rejected_notice(app: &McScan) -> Element<'_, Message> {
+    if app.rejected_ranges == 0 {
+        return Space::new().height(0).into();
+    }
+    let msg = format!(
+        "\u{26A0} {} {}",
+        app.rejected_ranges,
+        app.tr().ranges_rejected
+    );
+    column![
+        Space::new().height(8),
+        text(msg)
+            .size(11)
+            .font(SANS)
+            .style(|t: &Theme| text::Style {
+                color: Some(if is_dark(t) {
+                    c("#E5A24D")
+                } else {
+                    c("#B36A16")
+                }),
+            }),
+    ]
+    .into()
 }
