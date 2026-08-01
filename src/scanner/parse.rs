@@ -1,8 +1,11 @@
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use ipnet::IpNet;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 pub fn parse_ports(input: &str) -> Vec<u16> {
-    input.split(',').filter_map(|s| s.trim().parse::<u16>().ok()).collect()
+    input
+        .split(',')
+        .filter_map(|s| s.trim().parse::<u16>().ok())
+        .collect()
 }
 
 pub fn parse_ip_ranges(input: &str) -> Vec<IpNet> {
@@ -24,11 +27,17 @@ pub fn parse_ip_ranges(input: &str) -> Vec<IpNet> {
             continue;
         }
         if let Some((start_str, end_str)) = line.split_once('-') {
-            match (start_str.trim().parse::<IpAddr>(), end_str.trim().parse::<IpAddr>()) {
+            match (
+                start_str.trim().parse::<IpAddr>(),
+                end_str.trim().parse::<IpAddr>(),
+            ) {
                 (Ok(IpAddr::V4(a)), Ok(IpAddr::V4(b))) => {
-                    result.extend(range_to_cidrs(u32::from(a) as u128, u32::from(b) as u128, 32, |v| {
-                        IpAddr::V4(Ipv4Addr::from(v as u32))
-                    }));
+                    result.extend(range_to_cidrs(
+                        u32::from(a) as u128,
+                        u32::from(b) as u128,
+                        32,
+                        |v| IpAddr::V4(Ipv4Addr::from(v as u32)),
+                    ));
                 }
                 (Ok(IpAddr::V6(a)), Ok(IpAddr::V6(b))) => {
                     result.extend(range_to_cidrs(u128::from(a), u128::from(b), 128, |v| {
@@ -42,14 +51,23 @@ pub fn parse_ip_ranges(input: &str) -> Vec<IpNet> {
     result
 }
 
-fn range_to_cidrs(start: u128, end: u128, bits: u32, to_addr: impl Fn(u128) -> IpAddr) -> Vec<IpNet> {
+fn range_to_cidrs(
+    start: u128,
+    end: u128,
+    bits: u32,
+    to_addr: impl Fn(u128) -> IpAddr,
+) -> Vec<IpNet> {
     let mut result = Vec::new();
     if start > end {
         return result;
     }
     let mut s = start;
     loop {
-        let mut host_bits = if s == 0 { bits } else { s.trailing_zeros().min(bits) };
+        let mut host_bits = if s == 0 {
+            bits
+        } else {
+            s.trailing_zeros().min(bits)
+        };
         while host_bits > 0 && !matches!(block_end(s, host_bits), Some(e) if e <= end) {
             host_bits -= 1;
         }
@@ -88,13 +106,19 @@ mod tests {
 
     #[test]
     fn ipv4_range_splits_into_cidrs() {
-        assert_eq!(nets("10.0.0.0 - 10.0.0.3"), vec!["10.0.0.0/30".parse().unwrap()]);
+        assert_eq!(
+            nets("10.0.0.0 - 10.0.0.3"),
+            vec!["10.0.0.0/30".parse().unwrap()]
+        );
         assert_eq!(nets("10.0.0.1-10.0.0.2").len(), 2);
     }
 
     #[test]
     fn ipv6_range_splits_into_cidrs() {
-        assert_eq!(nets("2001:db8::0-2001:db8::3"), vec!["2001:db8::/126".parse().unwrap()]);
+        assert_eq!(
+            nets("2001:db8::0-2001:db8::3"),
+            vec!["2001:db8::/126".parse().unwrap()]
+        );
     }
 
     #[test]
@@ -105,31 +129,46 @@ mod tests {
 
     #[test]
     fn single_address_becomes_host_route() {
-        assert_eq!(nets("255.255.255.255"), vec!["255.255.255.255/32".parse().unwrap()]);
+        assert_eq!(
+            nets("255.255.255.255"),
+            vec!["255.255.255.255/32".parse().unwrap()]
+        );
         assert_eq!(nets("::1"), vec!["::1/128".parse().unwrap()]);
     }
 
     #[test]
     fn cidr_passes_through_unchanged() {
-        assert_eq!(nets("192.168.0.0/16"), vec!["192.168.0.0/16".parse().unwrap()]);
+        assert_eq!(
+            nets("192.168.0.0/16"),
+            vec!["192.168.0.0/16".parse().unwrap()]
+        );
         assert_eq!(nets("0.0.0.0/0"), vec!["0.0.0.0/0".parse().unwrap()]);
     }
 
     #[test]
     fn whole_ipv4_space_range_collapses_to_default_route() {
-        assert_eq!(nets("0.0.0.0 - 255.255.255.255"), vec!["0.0.0.0/0".parse().unwrap()]);
+        assert_eq!(
+            nets("0.0.0.0 - 255.255.255.255"),
+            vec!["0.0.0.0/0".parse().unwrap()]
+        );
     }
 
     #[test]
     fn equal_bounds_range_is_a_single_host() {
-        assert_eq!(nets("10.0.0.7-10.0.0.7"), vec!["10.0.0.7/32".parse().unwrap()]);
+        assert_eq!(
+            nets("10.0.0.7-10.0.0.7"),
+            vec!["10.0.0.7/32".parse().unwrap()]
+        );
     }
 
     #[test]
     fn blank_and_unparsable_lines_are_skipped() {
         assert!(nets("\n   \nnot-an-ip\n").is_empty());
         // Valid lines survive alongside junk ones.
-        assert_eq!(nets("garbage\n10.0.0.1\n"), vec!["10.0.0.1/32".parse().unwrap()]);
+        assert_eq!(
+            nets("garbage\n10.0.0.1\n"),
+            vec!["10.0.0.1/32".parse().unwrap()]
+        );
     }
 
     #[test]

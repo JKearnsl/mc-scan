@@ -1,10 +1,10 @@
-use iced::widget::{button, container, text};
 use iced::Length::Fixed;
+use iced::widget::{button, container, text};
 use iced::{Element, Fill, Theme};
 
 use crate::app::{McScan, Message};
 use crate::components::ui::{button_danger, button_primary};
-use crate::styles::{c, is_dark, SANS_SEMIBOLD};
+use crate::styles::{SANS_SEMIBOLD, c, is_dark};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let tr = app.tr();
@@ -12,8 +12,12 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     if app.is_scanning {
         return button(
             container(
-                text(tr.stop).size(16).font(SANS_SEMIBOLD)
-                    .style(|_: &Theme| text::Style { color: Some(c("#FFFFFF")) }),
+                text(tr.stop)
+                    .size(16)
+                    .font(SANS_SEMIBOLD)
+                    .style(|_: &Theme| text::Style {
+                        color: Some(c("#FFFFFF")),
+                    }),
             )
             .center(Fill),
         )
@@ -27,12 +31,22 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let can_scan = !app.address_list.values().is_empty();
     let btn = button(
         container(
-            text(tr.scan).size(16).font(SANS_SEMIBOLD)
+            text(tr.scan)
+                .size(16)
+                .font(SANS_SEMIBOLD)
                 .style(move |t: &Theme| text::Style {
                     color: Some(if can_scan {
-                        if is_dark(t) { c("#08110B") } else { c("#FFFFFF") }
+                        if is_dark(t) {
+                            c("#08110B")
+                        } else {
+                            c("#FFFFFF")
+                        }
                     } else {
-                        if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }
+                        if is_dark(t) {
+                            c("#5C636F")
+                        } else {
+                            c("#A0A7B1")
+                        }
                     }),
                 }),
         )
@@ -42,5 +56,9 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     .width(Fill)
     .height(Fixed(48.0));
 
-    if can_scan { btn.on_press(Message::ScanStart).into() } else { btn.into() }
+    if can_scan {
+        btn.on_press(Message::ScanStart).into()
+    } else {
+        btn.into()
+    }
 }

@@ -18,7 +18,12 @@ impl Concurrency {
     /// Parse a user-entered value, falling back to the default and clamping to
     /// the safe range — so callers always get a usable value.
     pub fn from_input(raw: &str) -> Self {
-        Self(raw.trim().parse().unwrap_or(Self::DEFAULT).clamp(Self::MIN, Self::MAX))
+        Self(
+            raw.trim()
+                .parse()
+                .unwrap_or(Self::DEFAULT)
+                .clamp(Self::MIN, Self::MAX),
+        )
     }
 
     pub fn get(self) -> usize {
@@ -94,7 +99,10 @@ mod tests {
 
     #[test]
     fn ports_parse_drops_invalid_entries() {
-        assert_eq!(&*Ports::from_input("25565, 19132 , x, 70000"), &[25565, 19132]);
+        assert_eq!(
+            &*Ports::from_input("25565, 19132 , x, 70000"),
+            &[25565, 19132]
+        );
         assert!(Ports::from_input("").is_empty());
     }
 }

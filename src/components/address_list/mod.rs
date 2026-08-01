@@ -1,14 +1,14 @@
 pub mod add_dialog;
 
+use crate::components::ui::scrollbar;
+use crate::scanner::types::host_count;
+use crate::styles::{MONO, c, is_dark};
+use iced::Length::Fixed;
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
 use iced::widget::{button, column, container, mouse_area, row, svg, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
-use iced::Length::Fixed;
 use ipnet::IpNet;
-use crate::components::ui::scrollbar;
-use crate::scanner::types::host_count;
-use crate::styles::{c, is_dark, MONO};
 
 #[derive(Debug, Clone)]
 pub enum AddressListMessage {
@@ -18,16 +18,11 @@ pub enum AddressListMessage {
     ScrollChanged(bool),
 }
 
+#[derive(Default)]
 pub struct AddressList {
     values: Vec<IpNet>,
     hover_index: Option<usize>,
     is_scrollable: bool,
-}
-
-impl Default for AddressList {
-    fn default() -> Self {
-        Self { values: Vec::new(), hover_index: None, is_scrollable: false }
-    }
 }
 
 impl AddressList {
@@ -72,14 +67,18 @@ impl AddressList {
         let mut list = column![].spacing(2);
         for (i, net) in self.values.iter().enumerate() {
             let hovered = self.hover_index == Some(i);
-            list = list.push(range_row(i, net, trash_handle.clone(), hovered, is_scrollable));
+            list = list.push(range_row(
+                i,
+                net,
+                trash_handle.clone(),
+                hovered,
+                is_scrollable,
+            ));
         }
 
         scrollbar(list)
             .on_scroll(|vp| {
-                AddressListMessage::ScrollChanged(
-                    vp.content_bounds().height > vp.bounds().height,
-                )
+                AddressListMessage::ScrollChanged(vp.content_bounds().height > vp.bounds().height)
             })
             .into()
     }
@@ -98,7 +97,11 @@ fn range_row(
             .size(11)
             .font(MONO)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                color: Some(if is_dark(t) {
+                    c("#5C636F")
+                } else {
+                    c("#A0A7B1")
+                }),
             }),
         Space::new().width(10),
         button(
@@ -107,7 +110,11 @@ fn range_row(
                 .width(Fixed(14.0))
                 .height(Fixed(14.0))
                 .style(|t: &Theme, _| iced::widget::svg::Style {
-                    color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+                    color: Some(if is_dark(t) {
+                        c("#6B7480")
+                    } else {
+                        c("#8A929E")
+                    }),
                 }),
         )
         .style(trash_btn_style)
@@ -122,14 +129,27 @@ fn range_row(
             .font(MONO)
             .padding(Padding::ZERO)
             .style(|t: &Theme, _| {
-                let color = if is_dark(t) { c("#C4CAD4") } else { c("#3A4049") };
+                let color = if is_dark(t) {
+                    c("#C4CAD4")
+                } else {
+                    c("#3A4049")
+                };
                 iced::widget::text_input::Style {
                     background: Background::Color(Color::TRANSPARENT),
-                    border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 0.0.into() },
+                    border: Border {
+                        color: Color::TRANSPARENT,
+                        width: 0.0,
+                        radius: 0.0.into(),
+                    },
                     icon: Color::TRANSPARENT,
                     placeholder: color,
                     value: color,
-                    selection: Color { r: 0.239, g: 0.839, b: 0.549, a: 0.25 },
+                    selection: Color {
+                        r: 0.239,
+                        g: 0.839,
+                        b: 0.549,
+                        a: 0.25,
+                    },
                 }
             }),
         right_side,
@@ -141,14 +161,27 @@ fn range_row(
     let content = container(row_content)
         .style(move |t: &Theme| ContainerStyle {
             background: if is_hovered {
-                Some(Background::Color(if is_dark(t) { c("#181D25") } else { c("#F2F4F7") }))
+                Some(Background::Color(if is_dark(t) {
+                    c("#181D25")
+                } else {
+                    c("#F2F4F7")
+                }))
             } else {
                 None
             },
-            border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 7.0.into() },
+            border: Border {
+                color: Color::TRANSPARENT,
+                width: 0.0,
+                radius: 7.0.into(),
+            },
             ..Default::default()
         })
-        .padding(Padding { top: 8.0, right: right_pad, bottom: 8.0, left: 10.0 })
+        .padding(Padding {
+            top: 8.0,
+            right: right_pad,
+            bottom: 8.0,
+            left: 10.0,
+        })
         .width(Fill);
 
     mouse_area(content)
@@ -158,27 +191,62 @@ fn range_row(
 }
 
 fn format_host_count(n: u128) -> String {
-    if n > u64::MAX as u128 { "∞".to_string() } else { n.to_string() }
+    if n > u64::MAX as u128 {
+        "∞".to_string()
+    } else {
+        n.to_string()
+    }
 }
 
 fn trash_btn_style(t: &Theme, status: iced::widget::button::Status) -> iced::widget::button::Style {
     use iced::widget::button::{Status, Style};
     use iced::{Border, Shadow};
-    let red  = if is_dark(t) { c("#E5604D") } else { c("#CC3A28") };
-    let idle = if is_dark(t) { c("#6B7480") } else { c("#8A929E") };
-    let border = Border { color: Color::TRANSPARENT, width: 0.0, radius: 6.0.into() };
+    let red = if is_dark(t) {
+        c("#E5604D")
+    } else {
+        c("#CC3A28")
+    };
+    let idle = if is_dark(t) {
+        c("#6B7480")
+    } else {
+        c("#8A929E")
+    };
+    let border = Border {
+        color: Color::TRANSPARENT,
+        width: 0.0,
+        radius: 6.0.into(),
+    };
     match status {
         Status::Hovered => Style {
-            background: Some(Background::Color(Color { r: 0.898, g: 0.376, b: 0.302, a: 0.15 })),
-            text_color: red, border, shadow: Shadow::default(), snap: false,
+            background: Some(Background::Color(Color {
+                r: 0.898,
+                g: 0.376,
+                b: 0.302,
+                a: 0.15,
+            })),
+            text_color: red,
+            border,
+            shadow: Shadow::default(),
+            snap: false,
         },
         Status::Pressed => Style {
-            background: Some(Background::Color(Color { r: 0.898, g: 0.376, b: 0.302, a: 0.25 })),
-            text_color: red, border, shadow: Shadow::default(), snap: false,
+            background: Some(Background::Color(Color {
+                r: 0.898,
+                g: 0.376,
+                b: 0.302,
+                a: 0.25,
+            })),
+            text_color: red,
+            border,
+            shadow: Shadow::default(),
+            snap: false,
         },
         _ => Style {
             background: None,
-            text_color: idle, border, shadow: Shadow::default(), snap: false,
+            text_color: idle,
+            border,
+            shadow: Shadow::default(),
+            snap: false,
         },
     }
 }

@@ -1,15 +1,15 @@
+use iced::Length::Fixed;
 use iced::widget::space::Space;
 use iced::widget::{column, image, row, text};
-use iced::Length::Fixed;
 use iced::{Alignment, Color, Element, Fill, Theme};
 
 use crate::components::ui::chip;
 use crate::i18n::Tr;
 use crate::scanner::types::ServerInfo;
-use crate::styles::{c, is_dark, MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD};
+use crate::styles::{MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD, c, is_dark};
 
-use super::avatar::{build_avatar_icon, AvatarSize};
 use super::ResultsListMessage;
+use super::avatar::{AvatarSize, build_avatar_icon};
 
 /// Фиксированная высота карточки (вместе с вертикальным паддингом кнопки 2×13).
 ///
@@ -18,11 +18,25 @@ use super::ResultsListMessage;
 pub const CARD_HEIGHT: f32 = 84.0;
 const CARD_CONTENT_HEIGHT: f32 = 58.0;
 
-pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Handle>, tr: &'static Tr) -> Element<'a, ResultsListMessage> {
+pub fn server_card_content<'a>(
+    info: &'a ServerInfo,
+    favicon: Option<image::Handle>,
+    tr: &'static Tr,
+) -> Element<'a, ResultsListMessage> {
     let (name, description) = split_motd(&info.motd);
-    let avatar = build_avatar_icon(&name, &info.edition, favicon, AvatarSize::SMALL, |t: &Theme| {
-        if is_dark(t) { c("#181D25") } else { c("#FFFFFF") }
-    });
+    let avatar = build_avatar_icon(
+        &name,
+        &info.edition,
+        favicon,
+        AvatarSize::SMALL,
+        |t: &Theme| {
+            if is_dark(t) {
+                c("#181D25")
+            } else {
+                c("#FFFFFF")
+            }
+        },
+    );
     let ip_port = format!("{}:{}", info.addr.ip(), info.addr.port());
 
     let mut left_col = column![
@@ -30,7 +44,11 @@ pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Hand
             .size(15)
             .font(SANS_SEMIBOLD)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
+                color: Some(if is_dark(t) {
+                    c("#E8EBF0")
+                } else {
+                    c("#161A20")
+                }),
             })
             .wrapping(text::Wrapping::None),
     ];
@@ -41,7 +59,11 @@ pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Hand
                 .size(12)
                 .font(SANS)
                 .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
+                    color: Some(if is_dark(t) {
+                        c("#A2ABBA")
+                    } else {
+                        c("#3A4049")
+                    }),
                 })
                 .wrapping(text::Wrapping::None),
         );
@@ -52,7 +74,11 @@ pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Hand
             .size(12)
             .font(MONO)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+                color: Some(if is_dark(t) {
+                    c("#6B7480")
+                } else {
+                    c("#8A929E")
+                }),
             })
             .wrapping(text::Wrapping::None),
     );
@@ -76,26 +102,39 @@ pub fn server_card_content<'a>(info: &'a ServerInfo, favicon: Option<image::Hand
         .into()
 }
 
-fn players_column(online: u64, max: u64, label: &'static str) -> Element<'static, ResultsListMessage> {
+fn players_column(
+    online: u64,
+    max: u64,
+    label: &'static str,
+) -> Element<'static, ResultsListMessage> {
     column![
         text(label)
             .size(10)
             .font(SANS_SEMIBOLD)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                color: Some(if is_dark(t) {
+                    c("#5C636F")
+                } else {
+                    c("#A0A7B1")
+                }),
             }),
         row![
-            text("●")
-                .size(8)
-                .font(MONO)
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) { c("#3DD68C") } else { c("#18A862") }),
+            text("●").size(8).font(MONO).style(|t: &Theme| text::Style {
+                color: Some(if is_dark(t) {
+                    c("#3DD68C")
+                } else {
+                    c("#18A862")
                 }),
+            }),
             text(format!("{} / {}", online, max))
                 .size(14)
                 .font(MONO_SEMIBOLD)
                 .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
+                    color: Some(if is_dark(t) {
+                        c("#E8EBF0")
+                    } else {
+                        c("#161A20")
+                    }),
                 }),
         ]
         .align_y(Alignment::Center)
@@ -118,12 +157,18 @@ fn stat_column(
             .size(10)
             .font(SANS_SEMIBOLD)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                color: Some(if is_dark(t) {
+                    c("#5C636F")
+                } else {
+                    c("#A0A7B1")
+                }),
             }),
         text(value)
             .size(14)
             .font(MONO_SEMIBOLD)
-            .style(move |_: &Theme| iced::widget::text::Style { color: Some(value_color) }),
+            .style(move |_: &Theme| iced::widget::text::Style {
+                color: Some(value_color)
+            }),
     ]
     .spacing(3)
     .align_x(iced::alignment::Horizontal::Right)
@@ -131,19 +176,31 @@ fn stat_column(
     .into()
 }
 
-fn version_column(version: String, software: Option<String>, label: &'static str) -> Element<'static, ResultsListMessage> {
+fn version_column(
+    version: String,
+    software: Option<String>,
+    label: &'static str,
+) -> Element<'static, ResultsListMessage> {
     let mut col = column![
         text(label)
             .size(10)
             .font(SANS_SEMIBOLD)
             .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                color: Some(if is_dark(t) {
+                    c("#5C636F")
+                } else {
+                    c("#A0A7B1")
+                }),
             }),
         text(version)
             .size(13)
             .font(MONO)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#A2ABBA") } else { c("#3A4049") }),
+                color: Some(if is_dark(t) {
+                    c("#A2ABBA")
+                } else {
+                    c("#3A4049")
+                }),
             }),
     ]
     .spacing(3)
@@ -157,7 +214,13 @@ fn version_column(version: String, software: Option<String>, label: &'static str
 }
 
 pub(crate) fn ping_color(ms: u64) -> Color {
-    if ms < 80 { c("#3DD68C") } else if ms <= 200 { c("#E0B23C") } else { c("#E5604D") }
+    if ms < 80 {
+        c("#3DD68C")
+    } else if ms <= 200 {
+        c("#E0B23C")
+    } else {
+        c("#E5604D")
+    }
 }
 
 fn split_motd(motd: &str) -> (String, String) {

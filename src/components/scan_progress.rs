@@ -1,10 +1,10 @@
+use iced::Length::Fixed;
 use iced::widget::space::Space;
 use iced::widget::{column, progress_bar, row, text};
-use iced::Length::Fixed;
 use iced::{Alignment, Border, Color, Element, Fill, Theme};
 
 use crate::app::{McScan, Message};
-use crate::styles::{c, is_dark, MONO};
+use crate::styles::{MONO, c, is_dark};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let tr = app.tr();
@@ -26,14 +26,26 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             .length(Fill),
         Space::new().height(Fixed(9.0)),
         row![
-            text(format!("{} {}", tr.scanning, range_str)).size(12).font(MONO)
+            text(format!("{} {}", tr.scanning, range_str))
+                .size(12)
+                .font(MONO)
                 .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#6B7480") } else { c("#8A929E") }),
+                    color: Some(if is_dark(t) {
+                        c("#6B7480")
+                    } else {
+                        c("#8A929E")
+                    }),
                 }),
             Space::new().width(Fill),
-            text(format!("{}% · {} / {}", pct, scanned, total)).size(12).font(MONO)
+            text(format!("{}% · {} / {}", pct, scanned, total))
+                .size(12)
+                .font(MONO)
                 .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) { c("#8C95A3") } else { c("#6B7480") }),
+                    color: Some(if is_dark(t) {
+                        c("#8C95A3")
+                    } else {
+                        c("#6B7480")
+                    }),
                 }),
         ]
         .align_y(Alignment::Center),
@@ -43,8 +55,20 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
 fn progress_bar_style(t: &Theme) -> iced::widget::progress_bar::Style {
     progress_bar::Style {
-        background: iced::Background::Color(if is_dark(t) { c("#1A1F27") } else { c("#E1E5EA") }),
-        bar: iced::Background::Color(if is_dark(t) { c("#3DD68C") } else { c("#18A862") }),
-        border: Border { radius: 2.0.into(), width: 0.0, color: Color::TRANSPARENT },
+        background: iced::Background::Color(if is_dark(t) {
+            c("#1A1F27")
+        } else {
+            c("#E1E5EA")
+        }),
+        bar: iced::Background::Color(if is_dark(t) {
+            c("#3DD68C")
+        } else {
+            c("#18A862")
+        }),
+        border: Border {
+            radius: 2.0.into(),
+            width: 0.0,
+            color: Color::TRANSPARENT,
+        },
     }
 }

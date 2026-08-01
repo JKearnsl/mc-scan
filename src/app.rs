@@ -1,19 +1,19 @@
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
-use futures::channel::{mpsc, oneshot};
-use futures::stream::BoxStream;
-use futures::StreamExt;
-use iced::{window, Element, Subscription, Task, Theme};
-use crate::components::{address_list, settings};
 use crate::components::address_list::{AddressList, AddressListMessage};
 use crate::components::results_list::{ResultsList, ResultsListMessage};
+use crate::components::{address_list, settings};
 use crate::i18n::{self, Language, Tr};
 use crate::scanner::limits::{Concurrency, Ports, TimeoutMs};
 use crate::scanner::parse::parse_ip_ranges;
 use crate::scanner::types::{ScanConfig, ServerInfo};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
+use futures::StreamExt;
+use futures::channel::{mpsc, oneshot};
+use futures::stream::BoxStream;
+use iced::{Element, Subscription, Task, Theme, window};
 use once_cell::sync::Lazy;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
 
 static RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
@@ -93,8 +93,12 @@ impl Default for ScanSettings {
 }
 
 impl ScanSettings {
-    fn java_ports_parsed(&self) -> Ports { Ports::from_input(&self.java_ports) }
-    fn bedrock_ports_parsed(&self) -> Ports { Ports::from_input(&self.bedrock_ports) }
+    fn java_ports_parsed(&self) -> Ports {
+        Ports::from_input(&self.java_ports)
+    }
+    fn bedrock_ports_parsed(&self) -> Ports {
+        Ports::from_input(&self.bedrock_ports)
+    }
 }
 
 pub struct McScan {
@@ -132,7 +136,10 @@ impl McScan {
             copied: false,
             refresh_index: 0,
         };
-        (app, Task::discard(window::latest()).map(Message::WindowInitialized))
+        (
+            app,
+            Task::discard(window::latest()).map(Message::WindowInitialized),
+        )
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -187,18 +194,16 @@ impl McScan {
 
             Message::AddressList(msg) => self.address_list.update(msg),
 
-            Message::ResultsList(msg) => {
-                match msg {
-                    ResultsListMessage::OpenPreview(addr) => {
-                        self.modal = ModalKind::ServerPreview(addr);
-                        self.copied = false;
-                        if let Some(server) = self.results.get_by_addr(addr) {
-                            let edition = server.edition.clone();
-                            return self.spawn_probe(addr, edition);
-                        }
+            Message::ResultsList(msg) => match msg {
+                ResultsListMessage::OpenPreview(addr) => {
+                    self.modal = ModalKind::ServerPreview(addr);
+                    self.copied = false;
+                    if let Some(server) = self.results.get_by_addr(addr) {
+                        let edition = server.edition.clone();
+                        return self.spawn_probe(addr, edition);
                     }
                 }
-            }
+            },
 
             Message::JavaPortsChanged(v) => {
                 self.settings.java_ports_error = false;
@@ -244,7 +249,9 @@ impl McScan {
                     return Task::batch([
                         iced::clipboard::write(s),
                         Task::perform(
-                            async move { let _ = rx.await; },
+                            async move {
+                                let _ = rx.await;
+                            },
                             |_| Message::CopiedReset,
                         ),
                     ]);
@@ -293,7 +300,13 @@ impl McScan {
     pub fn subscription(&self) -> Subscription<Message> {
         let scan_sub = if self.is_scanning {
             let config = Arc::new(self.scan_config());
-            Subscription::run_with(ScanKey { id: self.scan_id, config }, build_scan_stream)
+            Subscription::run_with(
+                ScanKey {
+                    id: self.scan_id,
+                    config,
+                },
+                build_scan_stream,
+            )
         } else {
             Subscription::none()
         };
@@ -308,20 +321,28 @@ impl McScan {
     }
 
     pub fn theme(&self) -> Theme {
-        if self.is_dark { COLOR_THEME.clone() } else { COLOR_THEME_LIGHT.clone() }
+        if self.is_dark {
+            COLOR_THEME.clone()
+        } else {
+            COLOR_THEME_LIGHT.clone()
+        }
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        use iced::widget::{container, row, Space, Stack};
-        use iced::{Fill, Length::Fixed};
-        use crate::components::{left_panel, right_panel, results_list};
+        use crate::components::{left_panel, results_list, right_panel};
         use crate::styles::{c, is_dark};
+        use iced::widget::{Space, Stack, container, row};
+        use iced::{Fill, Length::Fixed};
 
         let sep = container(Space::new())
             .width(Fixed(1.0))
             .height(Fill)
             .style(|t: &iced::Theme| iced::widget::container::Style {
-                background: Some(iced::Background::Color(if is_dark(t) { c("#1A1F27") } else { c("#E1E5EA") })),
+                background: Some(iced::Background::Color(if is_dark(t) {
+                    c("#1A1F27")
+                } else {
+                    c("#E1E5EA")
+                })),
                 ..Default::default()
             });
 
@@ -329,7 +350,9 @@ impl McScan {
             row![
                 container(left_panel::render(self)).width(Fill).height(Fill),
                 sep,
-                container(right_panel::render(self)).width(Fixed(340.0)).height(Fill),
+                container(right_panel::render(self))
+                    .width(Fixed(340.0))
+                    .height(Fill),
             ]
             .width(Fill)
             .height(Fill),
@@ -338,36 +361,48 @@ impl McScan {
         .width(Fill)
         .height(Fill);
 
-
         let mut stack = Stack::new().push(base);
         stack = match &self.modal {
-            ModalKind::None      => stack,
-            ModalKind::Settings  => stack.push(settings::render(self)),
+            ModalKind::None => stack,
+            ModalKind::Settings => stack.push(settings::render(self)),
             ModalKind::AddRanges => stack.push(address_list::add_dialog::render(self)),
             ModalKind::ServerPreview(_) => stack.push(results_list::preview_dialog::render(self)),
         };
         stack.into()
     }
 
-    fn spawn_probe(&self, addr: SocketAddr, edition: crate::scanner::types::Edition) -> Task<Message> {
+    fn spawn_probe(
+        &self,
+        addr: SocketAddr,
+        edition: crate::scanner::types::Edition,
+    ) -> Task<Message> {
         let timeout = TimeoutMs::from_input(&self.settings.timeout_ms).get();
         let query_enabled = self.settings.query_enabled;
         let online_mode_check = self.settings.online_mode_check;
         let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
         RUNTIME.spawn(async move {
             let result = crate::scanner::probe_server(
-                addr, edition, timeout, query_enabled, online_mode_check,
+                addr,
+                edition,
+                timeout,
+                query_enabled,
+                online_mode_check,
             )
             .await;
             let _ = tx.send(result);
         });
-        Task::perform(async move { rx.await.ok().flatten() }, Message::ServerRefreshed)
+        Task::perform(
+            async move { rx.await.ok().flatten() },
+            Message::ServerRefreshed,
+        )
     }
 
     fn spawn_favicon_decode(&self, addr: SocketAddr, favicon: String) -> Task<Message> {
         let (tx, rx) = oneshot::channel();
         RUNTIME.spawn_blocking(move || {
-            let _ = tx.send(crate::components::results_list::decode_favicon_avatars(&favicon));
+            let _ = tx.send(crate::components::results_list::decode_favicon_avatars(
+                &favicon,
+            ));
         });
         Task::perform(async move { rx.await.ok() }, move |res| match res {
             Some((small, large)) => Message::AvatarDecoded { addr, small, large },
@@ -389,7 +424,11 @@ impl McScan {
 fn app_bg_style(t: &iced::Theme) -> iced::widget::container::Style {
     use crate::styles::{c, is_dark};
     iced::widget::container::Style {
-        background: Some(iced::Background::Color(if is_dark(t) { c("#0E1116") } else { c("#F0F1F3") })),
+        background: Some(iced::Background::Color(if is_dark(t) {
+            c("#0E1116")
+        } else {
+            c("#F0F1F3")
+        })),
         ..Default::default()
     }
 }
@@ -434,15 +473,15 @@ fn build_scan_stream(key: &ScanKey) -> BoxStream<'static, Message> {
             let mut scanned = 0usize;
             while let Some(maybe_info) = stream.next().await {
                 scanned += 1;
-                if let Some(info) = maybe_info {
-                    if tx.unbounded_send(Message::ServerFound(info)).is_err() {
-                        return;
-                    }
+                if let Some(info) = maybe_info
+                    && tx.unbounded_send(Message::ServerFound(info)).is_err()
+                {
+                    return;
                 }
-                if scanned % 512 == 0 {
-                    if tx.unbounded_send(Message::ScanProgress(scanned)).is_err() {
-                        return;
-                    }
+                if scanned.is_multiple_of(512)
+                    && tx.unbounded_send(Message::ScanProgress(scanned)).is_err()
+                {
+                    return;
                 }
             }
             let _ = tx.unbounded_send(Message::ScanComplete);

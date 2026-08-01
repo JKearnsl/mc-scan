@@ -1,12 +1,11 @@
 use crate::app::Message;
+use iced::Theme;
 use iced::widget::space::Space;
 use iced::widget::toggler::Status;
 use iced::widget::{row, text, toggler};
 use iced::{Alignment, Element, Fill};
-use iced::Theme;
 
-use crate::styles::{c, is_dark, SANS};
-
+use crate::styles::{SANS, c, is_dark};
 
 pub fn checkbox(
     label: &'static str,
@@ -18,7 +17,11 @@ pub fn checkbox(
             .size(13)
             .font(SANS)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#C3CAD4") } else { c("#3A4049") }),
+                color: Some(if is_dark(t) {
+                    c("#C3CAD4")
+                } else {
+                    c("#3A4049")
+                }),
             }),
         Space::new().width(Fill),
         toggler(value)
@@ -30,7 +33,7 @@ pub fn checkbox(
                 style
             }),
     ]
-        .align_y(Alignment::Center)
-        .width(Fill)
-        .into()
+    .align_y(Alignment::Center)
+    .width(Fill)
+    .into()
 }

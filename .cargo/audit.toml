@@ -1,0 +1,13 @@
+# cargo-audit configuration.
+#
+# The ignored advisories all live in `quick-xml`, pulled in transitively by
+# `wayland-scanner` (iced → winit → smithay → wayland-scanner). That parser only
+# reads the Wayland protocol XML shipped with the crate at build time — trusted,
+# non-attacker-controlled input — so the DoS vectors do not apply to mc-scan, and
+# there is no semver-compatible bump available until the wayland stack updates.
+# Everything else stays enforced, so new advisories still fail the build.
+[advisories]
+ignore = [
+    "RUSTSEC-2026-0194", # quick-xml: quadratic time checking duplicate attribute names
+    "RUSTSEC-2026-0195", # quick-xml: unbounded namespace-declaration allocation (DoS)
+]

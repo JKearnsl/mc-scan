@@ -26,7 +26,10 @@ pub async fn probe(addr: SocketAddr, protocol: i32, timeout_ms: u64) -> Option<b
         write_varint(&mut payload, 2); // next state = login
         frame(payload)
     };
-    timeout(dur, stream.write_all(&handshake)).await.ok()?.ok()?;
+    timeout(dur, stream.write_all(&handshake))
+        .await
+        .ok()?
+        .ok()?;
 
     let ls = build_login_start(env!("CARGO_PKG_NAME"), protocol);
     timeout(dur, stream.write_all(&ls)).await.ok()?.ok()?;
@@ -126,10 +129,10 @@ mod tests {
 
     #[test]
     fn classify_maps_packet_ids() {
-        assert_eq!(classify_login_packet(0x01), Some(true));  // Encryption Request
+        assert_eq!(classify_login_packet(0x01), Some(true)); // Encryption Request
         assert_eq!(classify_login_packet(0x02), Some(false)); // Login Success
         assert_eq!(classify_login_packet(0x03), Some(false)); // Set Compression
-        assert_eq!(classify_login_packet(0x00), None);        // Disconnect
+        assert_eq!(classify_login_packet(0x00), None); // Disconnect
     }
 
     #[tokio::test]

@@ -1,14 +1,12 @@
+use iced::Length::{Fixed, Shrink};
+use iced::mouse::Interaction;
 use iced::widget::container::Style as ContainerStyle;
 use iced::widget::space::Space;
 use iced::widget::{column, container, mouse_area, row, text};
-use iced::Length::{Fixed, Shrink};
-use iced::mouse::Interaction;
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
-use crate::components::ui::{btn, scrollbar, BtnVariant};
-use crate::styles::{c, is_dark, SANS_SEMIBOLD};
-
-
+use crate::components::ui::{BtnVariant, btn, scrollbar};
+use crate::styles::{SANS_SEMIBOLD, c, is_dark};
 
 pub fn dialog<'a, M: Clone + 'a>(
     title: &'a str,
@@ -22,19 +20,40 @@ pub fn dialog<'a, M: Clone + 'a>(
 
     let header = container(
         row![
-            text(title).size(16).font(SANS_SEMIBOLD).style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#E8EBF0") } else { c("#161A20") }),
-            }),
+            text(title)
+                .size(16)
+                .font(SANS_SEMIBOLD)
+                .style(|t: &Theme| text::Style {
+                    color: Some(if is_dark(t) {
+                        c("#E8EBF0")
+                    } else {
+                        c("#161A20")
+                    }),
+                }),
             Space::new().width(Fill),
-            btn(BtnVariant::Icon { handle: close_icon, size: 14.0 }, on_close.clone()),
+            btn(
+                BtnVariant::Icon {
+                    handle: close_icon,
+                    size: 14.0
+                },
+                on_close.clone()
+            ),
         ]
         .align_y(Alignment::Center),
     )
-    .padding(Padding { top: 20.0, right: 24.0, bottom: 0.0, left: 24.0 });
+    .padding(Padding {
+        top: 20.0,
+        right: 24.0,
+        bottom: 0.0,
+        left: 24.0,
+    });
 
-    let scroll_body = scrollbar(
-        container(body).padding(Padding { top: 0.0, right: 24.0, bottom: 20.0, left: 24.0 }),
-    )
+    let scroll_body = scrollbar(container(body).padding(Padding {
+        top: 0.0,
+        right: 24.0,
+        bottom: 20.0,
+        left: 24.0,
+    }))
     .height(Shrink);
 
     let inner = column![header, scroll_body];
@@ -49,7 +68,12 @@ pub fn dialog<'a, M: Clone + 'a>(
             .center_x(Fill)
             .center_y(Fill)
             .style(|_: &Theme| ContainerStyle {
-                background: Some(Background::Color(Color { r: 0.0, g: 0.0, b: 0.0, a: 0.70 })),
+                background: Some(Background::Color(Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.70,
+                })),
                 ..Default::default()
             }),
     )
@@ -60,9 +84,17 @@ pub fn dialog<'a, M: Clone + 'a>(
 
 fn style(t: &Theme) -> ContainerStyle {
     ContainerStyle {
-        background: Some(Background::Color(if is_dark(t) { c("#0E1116") } else { c("#FFFFFF") })),
+        background: Some(Background::Color(if is_dark(t) {
+            c("#0E1116")
+        } else {
+            c("#FFFFFF")
+        })),
         border: Border {
-            color: if is_dark(t) { c("#232A34") } else { c("#E1E5EA") },
+            color: if is_dark(t) {
+                c("#232A34")
+            } else {
+                c("#E1E5EA")
+            },
             width: 1.0,
             radius: 12.0.into(),
         },

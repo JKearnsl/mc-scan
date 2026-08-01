@@ -1,6 +1,6 @@
-use iced::widget::scrollable::{default, Direction, Rail, Scroller, Scrollbar, Status, Style};
-use iced::widget::{scrollable, Scrollable};
-use iced::{border, Background, Element, Fill, Theme};
+use iced::widget::scrollable::{Direction, Rail, Scrollbar, Scroller, Status, Style, default};
+use iced::widget::{Scrollable, scrollable};
+use iced::{Background, Element, Fill, Theme, border};
 
 use crate::styles::{c, is_dark};
 
@@ -21,7 +21,11 @@ fn style(t: &Theme, status: Status) -> Style {
         border: border::rounded(2),
     };
     let rail = Rail {
-        background: Some(Background::Color(if dark { c("#1A1F27") } else { c("#E1E5EA") })),
+        background: Some(Background::Color(if dark {
+            c("#1A1F27")
+        } else {
+            c("#E1E5EA")
+        })),
         border: border::rounded(2),
         scroller,
     };

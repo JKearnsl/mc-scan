@@ -1,9 +1,7 @@
-
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
-
 
 #[derive(Debug, Default)]
 pub struct QueryData {
@@ -51,7 +49,11 @@ fn parse_challenge(data: &[u8]) -> Option<i32> {
     }
     let rest = &data[5..];
     let end = rest.iter().position(|&b| b == 0).unwrap_or(rest.len());
-    std::str::from_utf8(&rest[..end]).ok()?.trim().parse::<i32>().ok()
+    std::str::from_utf8(&rest[..end])
+        .ok()?
+        .trim()
+        .parse::<i32>()
+        .ok()
 }
 
 /// Full stat: type(0x00) + session(4) + `splitnum\0\x80\0` + KV + players.
@@ -181,7 +183,10 @@ mod tests {
         let data = packet(
             &[
                 ("map", "survival"),
-                ("plugins", "Paper on 1.20.1: EssentialsX 2.20; LuckPerms 5.4"),
+                (
+                    "plugins",
+                    "Paper on 1.20.1: EssentialsX 2.20; LuckPerms 5.4",
+                ),
             ],
             &[],
         );

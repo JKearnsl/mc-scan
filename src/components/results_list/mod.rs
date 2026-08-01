@@ -11,13 +11,18 @@ use iced::{Background, Border, Element, Fill, Padding, Shadow, Theme};
 
 use crate::i18n::Tr;
 use crate::scanner::types::ServerInfo;
-use crate::styles::{c, is_dark, SANS};
+use crate::styles::{SANS, c, is_dark};
 
-use avatar::{favicon_handle, AvatarSize};
-use item::{server_card_content, CARD_HEIGHT};
+use avatar::{AvatarSize, favicon_handle};
+use item::{CARD_HEIGHT, server_card_content};
 use virtual_list::VirtualList;
 
-const LIST_PADDING: Padding = Padding { top: 12.0, right: 16.0, bottom: 12.0, left: 16.0 };
+const LIST_PADDING: Padding = Padding {
+    top: 12.0,
+    right: 16.0,
+    bottom: 12.0,
+    left: 16.0,
+};
 const CARD_SPACING: f32 = 9.0;
 
 #[derive(Default)]
@@ -65,8 +70,12 @@ impl ResultsList {
         self.avatars_small.clear();
         self.avatars_large.clear();
     }
-    pub fn count(&self) -> usize { self.items.len() }
-    pub fn items(&self) -> &[ServerInfo] { &self.items }
+    pub fn count(&self) -> usize {
+        self.items.len()
+    }
+    pub fn items(&self) -> &[ServerInfo] {
+        &self.items
+    }
 
     pub fn get_by_addr(&self, addr: SocketAddr) -> Option<&ServerInfo> {
         self.index.get(&addr).map(|&idx| &self.items[idx])
@@ -76,14 +85,27 @@ impl ResultsList {
         self.avatars_large.get(&addr).cloned()
     }
 
-    pub fn set_avatars(&mut self, addr: SocketAddr, small: Option<image::Handle>, large: Option<image::Handle>) {
+    pub fn set_avatars(
+        &mut self,
+        addr: SocketAddr,
+        small: Option<image::Handle>,
+        large: Option<image::Handle>,
+    ) {
         match small {
-            Some(h) => { self.avatars_small.insert(addr, h); }
-            None => { self.avatars_small.remove(&addr); }
+            Some(h) => {
+                self.avatars_small.insert(addr, h);
+            }
+            None => {
+                self.avatars_small.remove(&addr);
+            }
         }
         match large {
-            Some(h) => { self.avatars_large.insert(addr, h); }
-            None => { self.avatars_large.remove(&addr); }
+            Some(h) => {
+                self.avatars_large.insert(addr, h);
+            }
+            None => {
+                self.avatars_large.remove(&addr);
+            }
         }
     }
 
@@ -91,9 +113,7 @@ impl ResultsList {
         let addr = info.addr;
         let favicon = info.favicon.take();
         {
-            let Some(&idx) = self.index.get(&addr) else {
-                return None;
-            };
+            let &idx = self.index.get(&addr)?;
             let s = &mut self.items[idx];
             s.online = info.online;
             s.max_players = info.max_players;
@@ -122,8 +142,12 @@ impl ResultsList {
             return None;
         }
         match new_hash {
-            Some(h) => { self.favicon_hash.insert(addr, h); }
-            None => { self.favicon_hash.remove(&addr); }
+            Some(h) => {
+                self.favicon_hash.insert(addr, h);
+            }
+            None => {
+                self.favicon_hash.remove(&addr);
+            }
         }
         self.avatars_small.remove(&addr);
         self.avatars_large.remove(&addr);
@@ -137,7 +161,11 @@ impl ResultsList {
                     .size(14)
                     .font(SANS)
                     .style(|t: &Theme| text::Style {
-                        color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                        color: Some(if is_dark(t) {
+                            c("#5C636F")
+                        } else {
+                            c("#A0A7B1")
+                        }),
                     }),
             )
             .center_x(Fill)
@@ -169,24 +197,32 @@ impl ResultsList {
 
 fn card_btn_style(t: &Theme, status: button::Status) -> button::Style {
     let dark = is_dark(t);
-    let bg       = if dark { c("#181D25") } else { c("#FFFFFF") };
+    let bg = if dark { c("#181D25") } else { c("#FFFFFF") };
     let bg_hover = if dark { c("#1E2530") } else { c("#F4F7FA") };
     let bg_press = if dark { c("#232A34") } else { c("#EAF0F5") };
     let border_n = if dark { c("#232A34") } else { c("#E5E9EF") };
     let border_h = if dark { c("#2E3849") } else { c("#C8D0DA") };
-    let txt      = if dark { c("#E8EBF0") } else { c("#161A20") };
+    let txt = if dark { c("#E8EBF0") } else { c("#161A20") };
 
     let base = button::Style {
         background: Some(Background::Color(bg)),
         text_color: txt,
-        border: Border { color: border_n, width: 1.0, radius: 10.0.into() },
+        border: Border {
+            color: border_n,
+            width: 1.0,
+            radius: 10.0.into(),
+        },
         shadow: Shadow::default(),
         snap: false,
     };
     match status {
         button::Status::Hovered => button::Style {
             background: Some(Background::Color(bg_hover)),
-            border: Border { color: border_h, width: 1.0, radius: 10.0.into() },
+            border: Border {
+                color: border_h,
+                width: 1.0,
+                radius: 10.0.into(),
+            },
             ..base
         },
         button::Status::Pressed => button::Style {
@@ -201,7 +237,12 @@ pub(crate) fn parse_version(raw: &str) -> (Option<String>, String) {
     if let Some(pos) = raw.find(' ') {
         let prefix = &raw[..pos];
         let rest = raw[pos + 1..].trim();
-        if !prefix.is_empty() && prefix.chars().next().map_or(false, |c| c.is_ascii_alphabetic()) {
+        if !prefix.is_empty()
+            && prefix
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_alphabetic())
+        {
             return (Some(prefix.to_string()), rest.to_string());
         }
     }
@@ -215,7 +256,9 @@ fn favicon_hash(favicon: &str) -> u64 {
     hasher.finish()
 }
 
-pub(crate) fn decode_favicon_avatars(favicon: &str) -> (Option<image::Handle>, Option<image::Handle>) {
+pub(crate) fn decode_favicon_avatars(
+    favicon: &str,
+) -> (Option<image::Handle>, Option<image::Handle>) {
     (
         favicon_handle(favicon, AvatarSize::SMALL),
         favicon_handle(favicon, AvatarSize::LARGE),
@@ -259,7 +302,10 @@ mod tests {
         assert_eq!(list.get_by_addr(addr(25565)).unwrap().latency_ms, 7);
 
         // Refreshing an unknown address is a no-op.
-        assert!(list.refresh(ServerInfo::base(addr(25599), Edition::Java)).is_none());
+        assert!(
+            list.refresh(ServerInfo::base(addr(25599), Edition::Java))
+                .is_none()
+        );
         assert_eq!(list.count(), 1);
     }
 
@@ -270,7 +316,10 @@ mod tests {
         info.favicon = Some("data:image/png;base64,AAAA".into());
 
         // First sighting hands the raw favicon off for decoding...
-        assert_eq!(list.push(info).as_deref(), Some("data:image/png;base64,AAAA"));
+        assert_eq!(
+            list.push(info).as_deref(),
+            Some("data:image/png;base64,AAAA")
+        );
         // ...but the stored item does not keep the base64 string.
         assert!(list.get_by_addr(addr(25565)).unwrap().favicon.is_none());
 
@@ -282,7 +331,10 @@ mod tests {
         // A changed favicon is handed off again.
         let mut changed = ServerInfo::base(addr(25565), Edition::Java);
         changed.favicon = Some("data:image/png;base64,BBBB".into());
-        assert_eq!(list.push(changed).as_deref(), Some("data:image/png;base64,BBBB"));
+        assert_eq!(
+            list.push(changed).as_deref(),
+            Some("data:image/png;base64,BBBB")
+        );
     }
 
     #[test]

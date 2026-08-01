@@ -3,8 +3,8 @@ use iced::widget::{column, row, text};
 use iced::{Element, Theme};
 
 use crate::app::{McScan, Message};
-use crate::components::ui::{btn, dialog, textarea, BtnVariant};
-use crate::styles::{c, is_dark, SANS};
+use crate::components::ui::{BtnVariant, btn, dialog, textarea};
+use crate::styles::{SANS, c, is_dark};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let tr = app.tr();
@@ -15,7 +15,11 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             .size(11)
             .font(SANS)
             .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) { c("#5C636F") } else { c("#A0A7B1") }),
+                color: Some(if is_dark(t) {
+                    c("#5C636F")
+                } else {
+                    c("#A0A7B1")
+                }),
             }),
         Space::new().height(12),
         textarea(&app.ranges_editor, Message::RangesEditorAction, 160.0),
@@ -27,5 +31,12 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         ],
     ];
 
-    dialog(tr.add_ranges_title, Message::CloseModal, Message::NoOp, 460.0, 540.0, body.into())
+    dialog(
+        tr.add_ranges_title,
+        Message::CloseModal,
+        Message::NoOp,
+        460.0,
+        540.0,
+        body.into(),
+    )
 }

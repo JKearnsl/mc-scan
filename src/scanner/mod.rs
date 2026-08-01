@@ -1,14 +1,14 @@
-mod java;
 mod bedrock;
-mod query;
-mod login;
+mod java;
 pub mod limits;
+mod login;
 pub mod parse;
+mod query;
 pub mod types;
 
+use futures::{Stream, StreamExt, stream};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use futures::{stream, Stream, StreamExt};
 use types::{Edition, ScanConfig, ServerInfo};
 
 pub fn scan(config: Arc<ScanConfig>) -> impl Stream<Item = Option<ServerInfo>> + Send + 'static {
@@ -57,15 +57,13 @@ pub async fn probe_server(
         Edition::Java => {
             let mut info = java::probe(addr, timeout_ms).await?;
             // Query
-            if query_enabled {
-                if let Some(q) = query::probe(addr, timeout_ms).await {
-                    info.world = q.world;
-                    info.plugins = q.plugins;
-                    // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
-                    if !q.players.is_empty() {
-                        info.samples = q.players;
-                        info.sample_ids.clear();
-                    }
+            if query_enabled && let Some(q) = query::probe(addr, timeout_ms).await {
+                info.world = q.world;
+                info.plugins = q.plugins;
+                // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
+                if !q.players.is_empty() {
+                    info.samples = q.players;
+                    info.sample_ids.clear();
                 }
             }
             // Detect online/offline-mode
@@ -80,7 +78,11 @@ pub async fn probe_server(
 
 // A 0.0.0.0 socket can't connect to an IPv6 target, so match the family.
 pub(super) fn local_bind_addr(target: &SocketAddr) -> &'static str {
-    if target.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }
+    if target.is_ipv6() {
+        "[::]:0"
+    } else {
+        "0.0.0.0:0"
+    }
 }
 
 pub(super) fn strip_section_codes(s: &str) -> String {
@@ -118,7 +120,13 @@ mod tests {
 
     #[test]
     fn local_bind_addr_matches_target_family() {
-        assert_eq!(super::local_bind_addr(&"127.0.0.1:1".parse().unwrap()), "0.0.0.0:0");
-        assert_eq!(super::local_bind_addr(&"[::1]:1".parse().unwrap()), "[::]:0");
+        assert_eq!(
+            super::local_bind_addr(&"127.0.0.1:1".parse().unwrap()),
+            "0.0.0.0:0"
+        );
+        assert_eq!(
+            super::local_bind_addr(&"[::1]:1".parse().unwrap()),
+            "[::]:0"
+        );
     }
 }

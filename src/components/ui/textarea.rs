@@ -1,8 +1,8 @@
-use iced::widget::text_editor;
 use iced::Length::Fixed;
+use iced::widget::text_editor;
 use iced::{Element, Padding, Theme};
 
-use crate::styles::{c, is_dark, MONO};
+use crate::styles::{MONO, c, is_dark};
 
 pub fn textarea<'a, M: Clone + 'a>(
     content: &'a text_editor::Content,
@@ -30,6 +30,11 @@ fn style(t: &Theme, _: text_editor::Status) -> text_editor::Style {
         },
         placeholder: if dark { c("#5C636F") } else { c("#A0A7B1") },
         value: if dark { c("#E8EBF0") } else { c("#161A20") },
-        selection: iced::Color { r: 0.239, g: 0.839, b: 0.549, a: 0.25 },
+        selection: iced::Color {
+            r: 0.239,
+            g: 0.839,
+            b: 0.549,
+            a: 0.25,
+        },
     }
 }

@@ -1,6 +1,6 @@
-use std::net::SocketAddr;
-use ipnet::IpNet;
 use super::limits::{Concurrency, Ports, TimeoutMs};
+use ipnet::IpNet;
+use std::net::SocketAddr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Edition {
@@ -35,7 +35,7 @@ pub struct ServerInfo {
     pub latency_ms: u64,
     pub samples: Vec<String>,
     pub ping_history: Vec<u64>,
-    
+
     // --- Java extras (SLP status) ---
     /// data-URI base64 PNG 64×64.
     pub favicon: Option<String>,
@@ -127,7 +127,11 @@ pub(crate) fn host_count(net: &IpNet) -> u128 {
         },
         IpNet::V6(n) => {
             let bits = 128 - n.prefix_len() as u32;
-            if bits >= 128 { u128::MAX } else { 1u128 << bits }
+            if bits >= 128 {
+                u128::MAX
+            } else {
+                1u128 << bits
+            }
         }
     }
 }

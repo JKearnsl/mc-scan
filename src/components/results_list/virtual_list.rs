@@ -12,8 +12,8 @@
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::renderer::{self, Quad, Renderer as _};
-use iced::advanced::widget::{tree, Tree};
-use iced::advanced::{mouse, Clipboard, Shell, Widget};
+use iced::advanced::widget::{Tree, tree};
+use iced::advanced::{Clipboard, Shell, Widget, mouse};
 use iced::{Background, Border, Element, Event, Length, Point, Rectangle, Size, Theme};
 
 const SCROLLBAR_WIDTH: f32 = 4.0;
@@ -154,7 +154,11 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
             (0, 0)
         } else {
             let f = ((offset - self.padding.top) / stride).floor();
-            let first = if f < 0.0 { 0 } else { (f as usize).min(self.count) };
+            let first = if f < 0.0 {
+                0
+            } else {
+                (f as usize).min(self.count)
+            };
             let l = ((offset + vh - self.padding.top) / stride).ceil();
             let last = (l.max(0.0) as usize).clamp(first, self.count);
             (first, last)
@@ -244,7 +248,9 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let Some(pos) = cursor.position() else { return };
                 let offset = tree.state.downcast_ref::<State>().offset;
-                let Some(sb) = self.scrollbar(bounds, offset) else { return };
+                let Some(sb) = self.scrollbar(bounds, offset) else {
+                    return;
+                };
                 let grab = if sb.thumb_bounds().contains(pos) {
                     pos.y - sb.thumb_y
                 } else if pos.x >= sb.x - SCROLLBAR_MARGIN && bounds.contains(pos) {
@@ -298,13 +304,22 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         let bounds = layout.bounds();
 
         renderer.with_layer(bounds, |renderer| {
-            for ((child, child_tree), child_layout) in
-                self.content.iter().zip(&tree.children).zip(layout.children())
+            for ((child, child_tree), child_layout) in self
+                .content
+                .iter()
+                .zip(&tree.children)
+                .zip(layout.children())
             {
                 if child_layout.bounds().intersects(&bounds) {
-                    child
-                        .as_widget()
-                        .draw(child_tree, renderer, theme, style, child_layout, cursor, &bounds);
+                    child.as_widget().draw(
+                        child_tree,
+                        renderer,
+                        theme,
+                        style,
+                        child_layout,
+                        cursor,
+                        &bounds,
+                    );
                 }
             }
         });
@@ -361,8 +376,11 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         viewport: &Rectangle,
         renderer: &iced::Renderer,
     ) -> mouse::Interaction {
-        for ((child, child_tree), child_layout) in
-            self.content.iter().zip(&tree.children).zip(layout.children())
+        for ((child, child_tree), child_layout) in self
+            .content
+            .iter()
+            .zip(&tree.children)
+            .zip(layout.children())
         {
             let interaction = child.as_widget().mouse_interaction(
                 child_tree,
