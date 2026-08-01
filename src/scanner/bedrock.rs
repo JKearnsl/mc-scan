@@ -1,27 +1,57 @@
+use super::Miss;
 use super::types::{Edition, ServerInfo};
 use std::net::SocketAddr;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
+use tracing::{debug, trace};
 
 const MAGIC: [u8; 16] = [
     0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78,
 ];
 
 pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
+    match probe_inner(addr, timeout_ms).await {
+        Ok(info) => {
+            debug!(%addr, edition = "bedrock", version = %info.version, online = info.online, "found");
+            Some(info)
+        }
+        Err(Miss::Unparsed(stage)) => {
+            debug!(%addr, edition = "bedrock", stage, "response did not parse");
+            None
+        }
+        Err(Miss::Unreachable(stage)) => {
+            trace!(%addr, edition = "bedrock", stage, "unreachable");
+            None
+        }
+    }
+}
+
+async fn probe_inner(addr: SocketAddr, timeout_ms: u64) -> Result<ServerInfo, Miss> {
     let dur = Duration::from_millis(timeout_ms);
     let start = Instant::now();
 
-    let socket = UdpSocket::bind(super::local_bind_addr(&addr)).await.ok()?;
-    socket.connect(addr).await.ok()?;
+    let socket = UdpSocket::bind(super::local_bind_addr(&addr))
+        .await
+        .map_err(|_| Miss::Unreachable("bind"))?;
+    socket
+        .connect(addr)
+        .await
+        .map_err(|_| Miss::Unreachable("connect"))?;
 
-    timeout(dur, socket.send(&build_ping())).await.ok()?.ok()?;
+    timeout(dur, socket.send(&build_ping()))
+        .await
+        .map_err(|_| Miss::Unreachable("send_timeout"))?
+        .map_err(|_| Miss::Unreachable("send"))?;
 
     let mut buf = [0u8; 4096];
-    let n = timeout(dur, socket.recv(&mut buf)).await.ok()?.ok()?;
+    let n = timeout(dur, socket.recv(&mut buf))
+        .await
+        .map_err(|_| Miss::Unreachable("recv_timeout"))?
+        .map_err(|_| Miss::Unreachable("recv"))?;
     let latency_ms = start.elapsed().as_millis() as u64;
 
-    parse_pong(&buf[..n], addr, latency_ms)
+    parse_pong(&buf[..n], addr, latency_ms).ok_or(Miss::Unparsed("pong"))
 }
 
 fn build_ping() -> [u8; 33] {

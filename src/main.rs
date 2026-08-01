@@ -44,6 +44,8 @@ fn raise_fd_limit() {
 }
 
 fn main() -> iced::Result {
+    init_tracing();
+
     #[cfg(unix)]
     raise_fd_limit();
 
@@ -77,4 +79,18 @@ fn main() -> iced::Result {
             ..window::Settings::default()
         })
         .run()
+}
+
+/// Logs to stderr, filtered by `RUST_LOG`. The default shows our scan summaries
+/// and errors from other crates, but keeps per-probe detail off (it would be one
+/// line per host on a wide scan) and silences noisy backend warnings (wgpu/gles);
+/// raise it with e.g. `RUST_LOG=mc_scan=debug` to see probe outcomes.
+fn init_tracing() {
+    use tracing_subscriber::EnvFilter;
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("error,mc_scan=info"));
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .init();
 }
