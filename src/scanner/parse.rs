@@ -9,46 +9,62 @@ pub fn parse_ports(input: &str) -> Vec<u16> {
 }
 
 pub fn parse_ip_ranges(input: &str) -> Vec<IpNet> {
+    parse_ip_ranges_reporting(input).0
+}
+
+/// Like [`parse_ip_ranges`] but also returns the non-empty lines that produced
+/// no networks (unparsable, wrong family, or reversed range) so the UI can tell
+/// the user which input was dropped instead of silently ignoring it.
+pub fn parse_ip_ranges_reporting(input: &str) -> (Vec<IpNet>, Vec<String>) {
     let mut result = Vec::new();
+    let mut rejected = Vec::new();
     for line in input.lines() {
         let line = line.trim();
         if line.is_empty() {
             continue;
         }
-        if let Ok(net) = line.parse::<IpNet>() {
-            result.push(net);
-            continue;
-        }
-        if let Ok(ip) = line.parse::<IpAddr>() {
-            let prefix = if ip.is_ipv4() { 32 } else { 128 };
-            if let Ok(net) = IpNet::new(ip, prefix) {
-                result.push(net);
-            }
-            continue;
-        }
-        if let Some((start_str, end_str)) = line.split_once('-') {
-            match (
-                start_str.trim().parse::<IpAddr>(),
-                end_str.trim().parse::<IpAddr>(),
-            ) {
-                (Ok(IpAddr::V4(a)), Ok(IpAddr::V4(b))) => {
-                    result.extend(range_to_cidrs(
-                        u32::from(a) as u128,
-                        u32::from(b) as u128,
-                        32,
-                        |v| IpAddr::V4(Ipv4Addr::from(v as u32)),
-                    ));
-                }
-                (Ok(IpAddr::V6(a)), Ok(IpAddr::V6(b))) => {
-                    result.extend(range_to_cidrs(u128::from(a), u128::from(b), 128, |v| {
-                        IpAddr::V6(Ipv6Addr::from(v))
-                    }));
-                }
-                _ => {}
-            }
+        let before = result.len();
+        parse_line(line, &mut result);
+        if result.len() == before {
+            rejected.push(line.to_string());
         }
     }
-    result
+    (result, rejected)
+}
+
+fn parse_line(line: &str, result: &mut Vec<IpNet>) {
+    if let Ok(net) = line.parse::<IpNet>() {
+        result.push(net);
+        return;
+    }
+    if let Ok(ip) = line.parse::<IpAddr>() {
+        let prefix = if ip.is_ipv4() { 32 } else { 128 };
+        if let Ok(net) = IpNet::new(ip, prefix) {
+            result.push(net);
+        }
+        return;
+    }
+    if let Some((start_str, end_str)) = line.split_once('-') {
+        match (
+            start_str.trim().parse::<IpAddr>(),
+            end_str.trim().parse::<IpAddr>(),
+        ) {
+            (Ok(IpAddr::V4(a)), Ok(IpAddr::V4(b))) => {
+                result.extend(range_to_cidrs(
+                    u32::from(a) as u128,
+                    u32::from(b) as u128,
+                    32,
+                    |v| IpAddr::V4(Ipv4Addr::from(v as u32)),
+                ));
+            }
+            (Ok(IpAddr::V6(a)), Ok(IpAddr::V6(b))) => {
+                result.extend(range_to_cidrs(u128::from(a), u128::from(b), 128, |v| {
+                    IpAddr::V6(Ipv6Addr::from(v))
+                }));
+            }
+            _ => {}
+        }
+    }
 }
 
 fn range_to_cidrs(
@@ -102,6 +118,19 @@ mod tests {
 
     fn nets(input: &str) -> Vec<IpNet> {
         parse_ip_ranges(input)
+    }
+
+    #[test]
+    fn reporting_collects_rejected_lines() {
+        let (nets, rejected) = parse_ip_ranges_reporting(
+            "10.0.0.0/24\n\ngarbage\n2001:db8::1-10.0.0.5\n10.0.0.9-10.0.0.1\n",
+        );
+        // Only the valid CIDR is kept; blank lines are skipped, not rejected.
+        assert_eq!(nets, vec!["10.0.0.0/24".parse().unwrap()]);
+        assert_eq!(
+            rejected,
+            vec!["garbage", "2001:db8::1-10.0.0.5", "10.0.0.9-10.0.0.1"]
+        );
     }
 
     #[test]

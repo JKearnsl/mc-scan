@@ -3,7 +3,7 @@ use crate::components::results_list::{ResultsList, ResultsListMessage};
 use crate::components::{address_list, settings};
 use crate::i18n::{self, Language, Tr};
 use crate::scanner::limits::{Concurrency, Ports, TimeoutMs};
-use crate::scanner::parse::parse_ip_ranges;
+use crate::scanner::parse::{parse_ip_ranges, parse_ip_ranges_reporting};
 use crate::scanner::types::{ScanConfig, ServerInfo};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
 use futures::StreamExt;
@@ -122,6 +122,9 @@ pub struct McScan {
     pub(crate) language: Language,
     pub(crate) copied: bool,
     pub(crate) refresh_index: usize,
+    /// Count of input lines rejected by the last "Add ranges" confirm; drives the
+    /// warning in that dialog and is 0 while there is nothing to report.
+    pub(crate) rejected_ranges: usize,
 }
 
 impl McScan {
@@ -163,6 +166,7 @@ impl McScan {
             language,
             copied: false,
             refresh_index: 0,
+            rejected_ranges: 0,
         };
         (
             app,
@@ -206,6 +210,7 @@ impl McScan {
 
                 if self.address_list.values().is_empty() {
                     self.ranges_editor = iced::widget::text_editor::Content::new();
+                    self.rejected_ranges = 0;
                     self.modal = ModalKind::AddRanges;
                     return Task::none();
                 }
@@ -293,7 +298,12 @@ impl McScan {
             Message::ToggleQuery(v) => self.settings.query_enabled = v,
             Message::ToggleOnlineModeCheck(v) => self.settings.online_mode_check = v,
 
-            Message::OpenModal(kind) => self.modal = kind,
+            Message::OpenModal(kind) => {
+                if kind == ModalKind::AddRanges {
+                    self.rejected_ranges = 0;
+                }
+                self.modal = kind;
+            }
             Message::CloseModal => {
                 self.modal = ModalKind::None;
                 self.copied = false;
@@ -305,10 +315,18 @@ impl McScan {
 
             Message::ConfirmAddRanges => {
                 let raw = self.ranges_editor.text();
-                let ranges = parse_ip_ranges(&raw);
+                let (ranges, rejected) = parse_ip_ranges_reporting(&raw);
                 self.address_list.push_ranges(ranges);
-                self.ranges_editor = iced::widget::text_editor::Content::new();
-                self.modal = ModalKind::None;
+                self.rejected_ranges = rejected.len();
+                if rejected.is_empty() {
+                    self.ranges_editor = iced::widget::text_editor::Content::new();
+                    self.modal = ModalKind::None;
+                } else {
+                    // Keep the dialog open with only the unparsed lines so the
+                    // user can see and fix them; the valid ones were added.
+                    self.ranges_editor =
+                        iced::widget::text_editor::Content::with_text(&rejected.join("\n"));
+                }
                 self.persist();
             }
 
