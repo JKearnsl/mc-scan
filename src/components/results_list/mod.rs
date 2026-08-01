@@ -23,6 +23,10 @@ const CARD_SPACING: f32 = 9.0;
 #[derive(Default)]
 pub struct ResultsList {
     items: Vec<ServerInfo>,
+    /// Maps a server address to its slot in `items` for O(1) lookup and dedup.
+    /// Items are only ever appended or updated in place (never removed), so the
+    /// stored indices stay valid until `clear`.
+    index: HashMap<SocketAddr, usize>,
     /// Favicon cache
     avatars_small: HashMap<SocketAddr, image::Handle>,
     avatars_large: HashMap<SocketAddr, image::Handle>,
@@ -35,10 +39,17 @@ pub enum ResultsListMessage {
 
 impl ResultsList {
     pub fn push(&mut self, info: ServerInfo) {
-        self.items.push(info);
+        match self.index.get(&info.addr) {
+            Some(&idx) => self.items[idx] = info,
+            None => {
+                self.index.insert(info.addr, self.items.len());
+                self.items.push(info);
+            }
+        }
     }
     pub fn clear(&mut self) {
         self.items.clear();
+        self.index.clear();
         self.avatars_small.clear();
         self.avatars_large.clear();
     }
@@ -46,7 +57,7 @@ impl ResultsList {
     pub fn items(&self) -> &[ServerInfo] { &self.items }
 
     pub fn get_by_addr(&self, addr: SocketAddr) -> Option<&ServerInfo> {
-        self.items.iter().find(|s| s.addr == addr)
+        self.index.get(&addr).map(|&idx| &self.items[idx])
     }
 
     pub fn avatar_large(&self, addr: SocketAddr) -> Option<image::Handle> {
@@ -69,9 +80,10 @@ impl ResultsList {
         let new_favicon = info.favicon.clone();
         let favicon_changed;
         {
-            let Some(s) = self.items.iter_mut().find(|s| s.addr == addr) else {
+            let Some(&idx) = self.index.get(&addr) else {
                 return None;
             };
+            let s = &mut self.items[idx];
             s.online = info.online;
             s.max_players = info.max_players;
             s.latency_ms = info.latency_ms;
@@ -183,4 +195,55 @@ pub(crate) fn decode_favicon_avatars(favicon: &str) -> (Option<image::Handle>, O
         favicon_handle(favicon, AvatarSize::SMALL),
         favicon_handle(favicon, AvatarSize::LARGE),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scanner::types::Edition;
+
+    fn addr(port: u16) -> SocketAddr {
+        SocketAddr::from(([127, 0, 0, 1], port))
+    }
+
+    #[test]
+    fn push_dedups_by_addr_and_keeps_indices_lookupable() {
+        let mut list = ResultsList::default();
+        list.push(ServerInfo::base(addr(25565), Edition::Java));
+        list.push(ServerInfo::base(addr(25566), Edition::Java));
+
+        // Re-pushing the same address updates in place instead of appending.
+        let mut updated = ServerInfo::base(addr(25565), Edition::Java);
+        updated.online = 42;
+        list.push(updated);
+
+        assert_eq!(list.count(), 2);
+        assert_eq!(list.get_by_addr(addr(25565)).unwrap().online, 42);
+        assert_eq!(list.get_by_addr(addr(25566)).unwrap().online, 0);
+        assert!(list.get_by_addr(addr(25567)).is_none());
+    }
+
+    #[test]
+    fn refresh_updates_existing_entry_via_index() {
+        let mut list = ResultsList::default();
+        list.push(ServerInfo::base(addr(25565), Edition::Java));
+
+        let mut info = ServerInfo::base(addr(25565), Edition::Java);
+        info.latency_ms = 7;
+        assert!(list.refresh(info).is_none()); // favicon unchanged → nothing to decode
+        assert_eq!(list.get_by_addr(addr(25565)).unwrap().latency_ms, 7);
+
+        // Refreshing an unknown address is a no-op.
+        assert!(list.refresh(ServerInfo::base(addr(25599), Edition::Java)).is_none());
+        assert_eq!(list.count(), 1);
+    }
+
+    #[test]
+    fn clear_drops_the_index() {
+        let mut list = ResultsList::default();
+        list.push(ServerInfo::base(addr(25565), Edition::Java));
+        list.clear();
+        assert!(list.get_by_addr(addr(25565)).is_none());
+        assert_eq!(list.count(), 0);
+    }
 }
