@@ -4,7 +4,11 @@ use iced::widget::{column, container, row, text};
 use iced::{Alignment, Element, Fill, Padding, Theme};
 
 use crate::app::{McScan, Message};
-use crate::components::{scan_progress, ui::status};
+use crate::components::ui::icons;
+use crate::components::{
+    scan_progress,
+    ui::{BtnVariant, btn, status},
+};
 use crate::styles::{MONO_SEMIBOLD, SANS, c, is_dark};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -70,10 +74,18 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
     .align_y(Alignment::Center)
     .spacing(12);
 
-    let mut r = row![title, Space::new().width(Fill)].align_y(Alignment::Center);
+    let mut r = row![title, Space::new().width(Fill)]
+        .align_y(Alignment::Center)
+        .spacing(10);
 
     if found > 0 {
-        r = r.push(status(format!("{} {}", found, tr.found)));
+        r = r.push(status(format!("{} {}", found, tr.found))).push(btn(
+            BtnVariant::Icon {
+                handle: icons::export(),
+                size: 12.0,
+            },
+            Message::ExportResults,
+        ));
     }
 
     r.into()

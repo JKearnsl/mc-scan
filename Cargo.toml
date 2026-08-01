@@ -25,6 +25,10 @@ once_cell = "1.21.4"
 sys-locale = "0.3"
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["png"] }
+# async-std (not tokio): rfd's tokio feature turns on zbus/tokio for the whole
+# graph, which panics iced's zbus-based OS-theme detection (it runs outside a
+# tokio context). async-std keeps zbus on its default async-io reactor.
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

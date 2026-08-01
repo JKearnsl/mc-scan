@@ -20,3 +20,4 @@ embedded_icon!(copy, COPY, "copy.svg");
 embedded_icon!(settings, SETTINGS, "settings.svg");
 embedded_icon!(plus, PLUS, "plus.svg");
 embedded_icon!(trash, TRASH, "trash.svg");
+embedded_icon!(export, EXPORT, "export.svg");

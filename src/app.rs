@@ -56,6 +56,7 @@ pub enum Message {
     SetLanguage(Language),
     CopyAddress,
     CopiedReset,
+    ExportResults,
     RefreshTick,
     ServerRefreshed(Option<ServerInfo>),
     AvatarDecoded {
@@ -260,6 +261,14 @@ impl McScan {
 
             Message::CopiedReset => {
                 self.copied = false;
+            }
+
+            Message::ExportResults => {
+                if self.results.count() > 0 {
+                    let csv = crate::export::to_csv(self.results.items());
+                    // Drive the dialog future to completion off the UI thread.
+                    RUNTIME.spawn(crate::export::save_dialog(csv));
+                }
             }
 
             Message::RefreshTick => {
