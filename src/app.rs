@@ -602,30 +602,26 @@ fn build_scan_stream(key: &ScanKey) -> BoxStream<'static, Message> {
     let config = key.config.clone();
     let (tx, rx) = mpsc::unbounded();
 
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .expect("tokio runtime");
-
-        rt.block_on(async move {
-            let mut stream = Box::pin(crate::scanner::scan(config));
-            let mut scanned = 0usize;
-            while let Some(maybe_info) = stream.next().await {
-                scanned += 1;
-                if let Some(info) = maybe_info
-                    && tx.unbounded_send(Message::ServerFound(info)).is_err()
-                {
-                    return;
-                }
-                if scanned.is_multiple_of(512)
-                    && tx.unbounded_send(Message::ScanProgress(scanned)).is_err()
-                {
-                    return;
-                }
+    // Runs on the shared runtime rather than spawning a fresh OS thread + tokio
+    // runtime per scan. The task ends on its own when the subscription is dropped
+    // (the receiver goes away and the sends start failing).
+    RUNTIME.spawn(async move {
+        let mut stream = Box::pin(crate::scanner::scan(config));
+        let mut scanned = 0usize;
+        while let Some(maybe_info) = stream.next().await {
+            scanned += 1;
+            if let Some(info) = maybe_info
+                && tx.unbounded_send(Message::ServerFound(info)).is_err()
+            {
+                return;
             }
-            let _ = tx.unbounded_send(Message::ScanComplete);
-        });
+            if scanned.is_multiple_of(512)
+                && tx.unbounded_send(Message::ScanProgress(scanned)).is_err()
+            {
+                return;
+            }
+        }
+        let _ = tx.unbounded_send(Message::ScanComplete);
     });
 
     Box::pin(rx)
