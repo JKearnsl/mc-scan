@@ -27,6 +27,11 @@ pub struct ResultsList {
     /// Items are only ever appended or updated in place (never removed), so the
     /// stored indices stay valid until `clear`.
     index: HashMap<SocketAddr, usize>,
+    /// Hash of the last-seen raw favicon per address. The full base64 data-URI
+    /// (dozens of KB) is decoded into the avatar handles below and then dropped;
+    /// only this hash is retained, so a refresh can tell whether the favicon
+    /// changed without holding the raw string alongside the decoded pixels.
+    favicon_hash: HashMap<SocketAddr, u64>,
     /// Favicon cache
     avatars_small: HashMap<SocketAddr, image::Handle>,
     avatars_large: HashMap<SocketAddr, image::Handle>,
@@ -38,18 +43,25 @@ pub enum ResultsListMessage {
 }
 
 impl ResultsList {
-    pub fn push(&mut self, info: ServerInfo) {
-        match self.index.get(&info.addr) {
+    /// Stores `info`, returning the raw favicon to decode when it differs from
+    /// what was last seen for this address (so the caller decodes it off-thread
+    /// and the list never retains the base64 string).
+    pub fn push(&mut self, mut info: ServerInfo) -> Option<String> {
+        let addr = info.addr;
+        let favicon = info.favicon.take();
+        match self.index.get(&addr) {
             Some(&idx) => self.items[idx] = info,
             None => {
-                self.index.insert(info.addr, self.items.len());
+                self.index.insert(addr, self.items.len());
                 self.items.push(info);
             }
         }
+        self.update_favicon(addr, favicon)
     }
     pub fn clear(&mut self) {
         self.items.clear();
         self.index.clear();
+        self.favicon_hash.clear();
         self.avatars_small.clear();
         self.avatars_large.clear();
     }
@@ -75,10 +87,9 @@ impl ResultsList {
         }
     }
 
-    pub fn refresh(&mut self, info: ServerInfo) -> Option<String> {
+    pub fn refresh(&mut self, mut info: ServerInfo) -> Option<String> {
         let addr = info.addr;
-        let new_favicon = info.favicon.clone();
-        let favicon_changed;
+        let favicon = info.favicon.take();
         {
             let Some(&idx) = self.index.get(&addr) else {
                 return None;
@@ -90,8 +101,6 @@ impl ResultsList {
             s.samples = info.samples;
             s.sample_ids = info.sample_ids;
             s.mods = info.mods;
-            favicon_changed = s.favicon != info.favicon;
-            s.favicon = info.favicon;
             s.secure_chat = info.secure_chat;
             s.gamemode = info.gamemode;
             s.world = info.world;
@@ -102,14 +111,23 @@ impl ResultsList {
                 s.ping_history.remove(0);
             }
         }
+        self.update_favicon(addr, favicon)
+    }
 
-        if favicon_changed {
-            self.avatars_small.remove(&addr);
-            self.avatars_large.remove(&addr);
-            new_favicon
-        } else {
-            None
+    /// Records the favicon's hash and drops avatars that no longer match,
+    /// returning the raw data-URI only when it changed so it is decoded once.
+    fn update_favicon(&mut self, addr: SocketAddr, favicon: Option<String>) -> Option<String> {
+        let new_hash = favicon.as_deref().map(favicon_hash);
+        if self.favicon_hash.get(&addr).copied() == new_hash {
+            return None;
         }
+        match new_hash {
+            Some(h) => { self.favicon_hash.insert(addr, h); }
+            None => { self.favicon_hash.remove(&addr); }
+        }
+        self.avatars_small.remove(&addr);
+        self.avatars_large.remove(&addr);
+        favicon
     }
 
     pub fn view(&self, tr: &'static Tr) -> Element<'_, ResultsListMessage> {
@@ -190,6 +208,13 @@ pub(crate) fn parse_version(raw: &str) -> (Option<String>, String) {
     (None, raw.to_string())
 }
 
+fn favicon_hash(favicon: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    favicon.hash(&mut hasher);
+    hasher.finish()
+}
+
 pub(crate) fn decode_favicon_avatars(favicon: &str) -> (Option<image::Handle>, Option<image::Handle>) {
     (
         favicon_handle(favicon, AvatarSize::SMALL),
@@ -236,6 +261,28 @@ mod tests {
         // Refreshing an unknown address is a no-op.
         assert!(list.refresh(ServerInfo::base(addr(25599), Edition::Java)).is_none());
         assert_eq!(list.count(), 1);
+    }
+
+    #[test]
+    fn push_hands_off_favicon_once_and_never_retains_it() {
+        let mut list = ResultsList::default();
+        let mut info = ServerInfo::base(addr(25565), Edition::Java);
+        info.favicon = Some("data:image/png;base64,AAAA".into());
+
+        // First sighting hands the raw favicon off for decoding...
+        assert_eq!(list.push(info).as_deref(), Some("data:image/png;base64,AAAA"));
+        // ...but the stored item does not keep the base64 string.
+        assert!(list.get_by_addr(addr(25565)).unwrap().favicon.is_none());
+
+        // Re-pushing the same favicon is a no-op (already decoded).
+        let mut same = ServerInfo::base(addr(25565), Edition::Java);
+        same.favicon = Some("data:image/png;base64,AAAA".into());
+        assert!(list.push(same).is_none());
+
+        // A changed favicon is handed off again.
+        let mut changed = ServerInfo::base(addr(25565), Edition::Java);
+        changed.favicon = Some("data:image/png;base64,BBBB".into());
+        assert_eq!(list.push(changed).as_deref(), Some("data:image/png;base64,BBBB"));
     }
 
     #[test]

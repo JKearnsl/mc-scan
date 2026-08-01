@@ -171,9 +171,7 @@ impl McScan {
 
             Message::ServerFound(info) => {
                 let addr = info.addr;
-                let favicon = info.favicon.clone();
-                self.results.push(info);
-                if let Some(f) = favicon {
+                if let Some(f) = self.results.push(info) {
                     return self.spawn_favicon_decode(addr, f);
                 }
             }
