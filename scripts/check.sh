@@ -13,8 +13,8 @@ step() {
 }
 
 step "rustfmt" cargo fmt --all --check
-step "clippy"  cargo clippy --all-targets -- -D warnings
-step "tests"   cargo test
+step "clippy"  cargo clippy --workspace --all-targets -- -D warnings
+step "tests"   cargo test --workspace
 
 if command -v cargo-audit >/dev/null 2>&1; then
     step "audit" cargo audit

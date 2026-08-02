@@ -1,7 +1,6 @@
 pub mod add_dialog;
 
 use crate::components::ui::scrollbar;
-use crate::scanner::types::host_count;
 use crate::styles::{MONO, c, is_dark};
 use iced::Length::Fixed;
 use iced::widget::container::Style as ContainerStyle;
@@ -9,6 +8,7 @@ use iced::widget::space::Space;
 use iced::widget::{button, column, container, mouse_area, row, svg, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 use ipnet::IpNet;
+use scanner::types::host_count;
 
 #[derive(Debug, Clone)]
 pub enum AddressListMessage {

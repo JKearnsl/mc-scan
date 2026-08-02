@@ -1,0 +1,12 @@
+[package]
+name = "scanner"
+version.workspace = true
+edition.workspace = true
+description = "GUI-free Minecraft server scanning core for mc-scan"
+
+[dependencies]
+tokio = { workspace = true, features = ["rt", "macros", "net", "io-util", "time"] }
+futures.workspace = true
+serde_json.workspace = true
+ipnet.workspace = true
+tracing.workspace = true

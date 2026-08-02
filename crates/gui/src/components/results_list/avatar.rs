@@ -4,8 +4,8 @@ use iced::widget::container::Style as ContainerStyle;
 use iced::widget::{Stack, container, image, text};
 use iced::{Background, Border, Color, ContentFit, Element, Theme, gradient};
 
-use crate::scanner::types::Edition;
 use crate::styles::{MONO_SEMIBOLD, SANS_SEMIBOLD, c, is_dark};
+use scanner::types::Edition;
 
 /// Dimensions for a `build_avatar` instance.
 /// - `SMALL` is used in the results list,

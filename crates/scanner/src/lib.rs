@@ -1,4 +1,9 @@
+//! GUI-free core of mc-scan: probes Minecraft servers (Java/Bedrock/Query and
+//! online-mode detection) and serializes the results. Depends on no `iced`/UI
+//! crate, so it can back the GUI, a headless/CLI runner, or fast unit tests.
+
 mod bedrock;
+pub mod export;
 mod java;
 pub mod limits;
 mod login;
@@ -96,7 +101,7 @@ pub async fn probe_server(
 }
 
 // A 0.0.0.0 socket can't connect to an IPv6 target, so match the family.
-pub(super) fn local_bind_addr(target: &SocketAddr) -> &'static str {
+pub(crate) fn local_bind_addr(target: &SocketAddr) -> &'static str {
     if target.is_ipv6() {
         "[::]:0"
     } else {
@@ -104,7 +109,7 @@ pub(super) fn local_bind_addr(target: &SocketAddr) -> &'static str {
     }
 }
 
-pub(super) fn strip_section_codes(s: &str) -> String {
+pub(crate) fn strip_section_codes(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(c) = chars.next() {
