@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=mc-scan
+Comment=Minecraft server scanner
+Exec=mc-scan
+Icon=mc-scan
+Terminal=false
+Categories=Utility;Network;
+# Must match the window application_id set in main.rs so the compositor links
+# the running window to this entry's icon.
+StartupWMClass=mc-scan
