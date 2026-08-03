@@ -6,6 +6,7 @@ pub mod icons;
 mod input;
 mod scrollbar;
 mod textarea;
+mod wrap;
 
 pub use badge::{chip, status};
 pub use button::{BtnVariant, btn, button_danger, button_primary};
@@ -14,6 +15,7 @@ pub use dialog::dialog;
 pub use input::labeled_input;
 pub use scrollbar::scrollbar;
 pub use textarea::textarea;
+pub use wrap::wrap;
 
 use iced::Length::Fixed;
 use iced::widget::container::Style as ContainerStyle;

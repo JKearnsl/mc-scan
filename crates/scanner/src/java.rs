@@ -199,16 +199,19 @@ fn parse_mods(json: &Value) -> Vec<ModInfo> {
     Vec::new()
 }
 
+/// Flattens the description component tree into plain text, keeping the raw
+/// `§` formatting codes intact. Stripping them is a display concern handled by
+/// the GUI at render time, so the CSV export retains the original codes.
 fn parse_description(v: &Value) -> String {
     match v {
-        Value::String(s) => super::strip_section_codes(s),
+        Value::String(s) => s.clone(),
         Value::Array(arr) => arr.iter().map(parse_description).collect(),
         Value::Object(map) => {
             let text = map
                 .get("text")
                 .and_then(|v| v.as_str())
-                .map(super::strip_section_codes)
-                .unwrap_or_default();
+                .unwrap_or_default()
+                .to_string();
             let extras = map
                 .get("extra")
                 .and_then(|v| v.as_array())
@@ -290,9 +293,10 @@ mod tests {
     }
 
     #[test]
-    fn description_strips_codes_and_walks_extra() {
+    fn description_keeps_raw_codes_and_walks_extra() {
         use serde_json::json;
-        assert_eq!(parse_description(&json!("§aHello")), "Hello");
+        // Formatting codes are preserved verbatim; the GUI strips them for display.
+        assert_eq!(parse_description(&json!("§aHello")), "§aHello");
         assert_eq!(
             parse_description(&json!({"text": "A", "extra": [{"text": "B"}, "C"]})),
             "ABC"
