@@ -1,59 +1,22 @@
-[package]
-name = "mc-scan"
+[workspace]
+resolver = "3"
+members = ["crates/scanner", "crates/gui"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "Minecraft server scanner"
-build = "build.rs"
 
-[dependencies]
-iced = { version = "0.14.0", default-features = false, features = [
-    "advanced",
-    "wgpu",
-    "tiny-skia",
-    "crisp",
-    "web-colors",
-    "thread-pool",
-    "image",
-    "svg",
-    "linux-theme-detection",
-    "x11",
-    "wayland",
-] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time"] }
+# Versions shared by more than one crate live here; members opt in with
+# `dep.workspace = true` and add their own features. A future CLI crate reuses
+# the same pins for free.
+[workspace.dependencies]
+tokio = "1"
 futures = "0.3"
-serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.140"
-directories = "6"
-ipnet = { version = "2.12.0", features = [] }
-once_cell = "1.21.4"
+ipnet = "2.12.0"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-sys-locale = "0.3"
-base64 = "0.22"
-image = { version = "0.25", default-features = false, features = ["png"] }
-# async-std (not tokio): rfd's tokio feature turns on zbus/tokio for the whole
-# graph, which panics iced's zbus-based OS-theme detection (it runs outside a
-# tokio context). async-std keeps zbus on its default async-io reactor.
-rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
-# Already in the tree via iced; used directly to follow the OS color scheme.
-mundy = { version = "0.2.3", default-features = false, features = ["color-scheme", "async-io"] }
-
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
-
-# Embeds the app icon (and a default manifest) into the Windows .exe.
-[target.'cfg(windows)'.build-dependencies]
-winresource = "0.1"
 
 [profile.release]
 lto = "fat"
 codegen-units = 1
 strip = true
-
-# Metadata for `cargo bundle` (.app on macOS, .deb/AppImage on Linux).
-[package.metadata.bundle]
-name = "mc-scan"
-identifier = "com.jkearnsl.mc-scan"
-icon = ["assets/icon.png"]
-category = "Utility"
-short_description = "Minecraft server scanner"

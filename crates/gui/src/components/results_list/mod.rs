@@ -10,8 +10,8 @@ use iced::widget::{button, container, image, text};
 use iced::{Background, Border, Element, Fill, Padding, Shadow, Theme};
 
 use crate::i18n::Tr;
-use crate::scanner::types::ServerInfo;
 use crate::styles::{SANS, c, is_dark};
+use scanner::types::ServerInfo;
 
 use avatar::{AvatarSize, favicon_handle};
 use item::{CARD_HEIGHT, server_card_content};
@@ -268,7 +268,7 @@ pub(crate) fn decode_favicon_avatars(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanner::types::Edition;
+    use scanner::types::Edition;
 
     fn addr(port: u16) -> SocketAddr {
         SocketAddr::from(([127, 0, 0, 1], port))

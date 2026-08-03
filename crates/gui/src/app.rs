@@ -2,15 +2,15 @@ use crate::components::address_list::{AddressList, AddressListMessage};
 use crate::components::results_list::{ResultsList, ResultsListMessage};
 use crate::components::{address_list, settings};
 use crate::i18n::{self, Language, Tr};
-use crate::scanner::limits::{Concurrency, Ports, TimeoutMs};
-use crate::scanner::parse::{parse_ip_ranges, parse_ip_ranges_reporting};
-use crate::scanner::types::{ScanConfig, ServerInfo};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
 use futures::StreamExt;
 use futures::channel::{mpsc, oneshot};
 use futures::stream::BoxStream;
 use iced::{Element, Subscription, Task, Theme, window};
 use once_cell::sync::Lazy;
+use scanner::limits::{Concurrency, Ports, TimeoutMs};
+use scanner::parse::{parse_ip_ranges, parse_ip_ranges_reporting};
+use scanner::types::{ScanConfig, ServerInfo};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -501,24 +501,15 @@ impl McScan {
         stack.into()
     }
 
-    fn spawn_probe(
-        &self,
-        addr: SocketAddr,
-        edition: crate::scanner::types::Edition,
-    ) -> Task<Message> {
+    fn spawn_probe(&self, addr: SocketAddr, edition: scanner::types::Edition) -> Task<Message> {
         let timeout = TimeoutMs::from_input(&self.settings.timeout_ms).get();
         let query_enabled = self.settings.query_enabled;
         let online_mode_check = self.settings.online_mode_check;
         let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
         RUNTIME.spawn(async move {
-            let result = crate::scanner::probe_server(
-                addr,
-                edition,
-                timeout,
-                query_enabled,
-                online_mode_check,
-            )
-            .await;
+            let result =
+                scanner::probe_server(addr, edition, timeout, query_enabled, online_mode_check)
+                    .await;
             let _ = tx.send(result);
         });
         Task::perform(
@@ -606,7 +597,7 @@ fn build_scan_stream(key: &ScanKey) -> BoxStream<'static, Message> {
     // runtime per scan. The task ends on its own when the subscription is dropped
     // (the receiver goes away and the sends start failing).
     RUNTIME.spawn(async move {
-        let mut stream = Box::pin(crate::scanner::scan(config));
+        let mut stream = Box::pin(scanner::scan(config));
         let mut scanned = 0usize;
         while let Some(maybe_info) = stream.next().await {
             scanned += 1;

@@ -5,8 +5,8 @@ use iced::{Alignment, Color, Element, Fill, Theme};
 
 use crate::components::ui::chip;
 use crate::i18n::Tr;
-use crate::scanner::types::ServerInfo;
 use crate::styles::{MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD, c, is_dark};
+use scanner::types::ServerInfo;
 
 use super::ResultsListMessage;
 use super::avatar::{AvatarSize, build_avatar_icon};

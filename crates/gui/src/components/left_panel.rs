@@ -44,7 +44,7 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
     let tr = app.tr();
 
     let title = row![
-        text(env!("CARGO_PKG_NAME"))
+        text(crate::APP_NAME)
             .size(18)
             .font(MONO_SEMIBOLD)
             .style(|t: &Theme| text::Style {

@@ -3,11 +3,14 @@ mod components;
 mod config;
 mod export;
 mod i18n;
-mod scanner;
 mod styles;
 
 use app::McScan;
 use iced::{Font, Size, window};
+
+/// Product name shown in the window title and header. Kept separate from the
+/// crate name (`gui`) so renaming the crate can't change what the user sees.
+pub const APP_NAME: &str = "mc-scan";
 
 const PLEX_SANS: &[u8] = include_bytes!("../assets/fonts/IBMPlexSans-Regular.ttf");
 const PLEX_SANS_MEDIUM: &[u8] = include_bytes!("../assets/fonts/IBMPlexSans-Medium.ttf");
@@ -51,7 +54,7 @@ fn main() -> iced::Result {
     raise_fd_limit();
 
     iced::application(McScan::init, McScan::update, McScan::view)
-        .title(env!("CARGO_PKG_NAME"))
+        .title(APP_NAME)
         .theme(McScan::theme)
         .subscription(McScan::subscription)
         .font(PLEX_SANS)

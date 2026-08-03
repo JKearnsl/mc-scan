@@ -10,8 +10,8 @@ use iced::{
 
 use super::avatar::{AvatarSize, build_avatar_icon};
 use crate::app::{McScan, Message, ModalKind};
-use crate::scanner::types::Edition;
 use crate::styles::{MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD, c, is_dark};
+use scanner::types::Edition;
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let addr = match &app.modal {
