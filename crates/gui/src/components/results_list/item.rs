@@ -6,15 +6,12 @@ use iced::{Alignment, Color, Element, Fill, Theme};
 use crate::components::ui::chip;
 use crate::i18n::Tr;
 use crate::styles::{MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD, c, is_dark};
+use crate::text::strip_section_codes;
 use scanner::types::ServerInfo;
 
 use super::ResultsListMessage;
 use super::avatar::{AvatarSize, build_avatar_icon};
 
-/// Фиксированная высота карточки (вместе с вертикальным паддингом кнопки 2×13).
-///
-/// Виртуализация списка рендерит только видимые строки и потому требует единой
-/// высоты: 58px под контент (аватар 56 + строки MOTD/адреса) + 26px паддинга.
 pub const CARD_HEIGHT: f32 = 84.0;
 const CARD_CONTENT_HEIGHT: f32 = 58.0;
 
@@ -86,7 +83,7 @@ pub fn server_card_content<'a>(
     let left_block = left_col.spacing(3).width(Fill).clip(true);
 
     let ping_str = format!("{} ms", info.latency_ms);
-    let (software, ver_str) = super::parse_version(&info.version);
+    let (software, ver_str) = super::parse_version(&strip_section_codes(&info.version));
 
     let right_block = row![
         players_column(info.online as u64, info.max_players as u64, tr.players),
@@ -224,7 +221,8 @@ pub(crate) fn ping_color(ms: u64) -> Color {
 }
 
 fn split_motd(motd: &str) -> (String, String) {
-    let stripped = motd.trim();
+    let cleaned = strip_section_codes(motd);
+    let stripped = cleaned.trim();
     if let Some((first, rest)) = stripped.split_once('\n') {
         (first.trim().to_string(), rest.trim().to_string())
     } else {

@@ -1,4 +1,5 @@
-use crate::components::ui::{BtnVariant, btn, scrollbar as styled_scroll};
+use crate::components::ui::{BtnVariant, btn, scrollbar as styled_scroll, wrap};
+use crate::text::strip_section_codes;
 use iced::Length::Fixed;
 use iced::mouse::Interaction;
 use iced::widget::container::Style as ContainerStyle;
@@ -28,7 +29,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let close_icon = crate::components::ui::icons::close();
     let copy_icon = crate::components::ui::icons::copy();
 
-    let (software, mc_version) = super::parse_version(&server.version);
+    let (software, mc_version) = super::parse_version(&strip_section_codes(&server.version));
     let edition_str = match server.edition {
         Edition::Java => tr.java_edition,
         Edition::Bedrock => tr.bedrock_edition,
@@ -101,7 +102,8 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
                 Space::new().height(6),
                 online_row,
             ]
-            .width(Fill),
+            .width(Fill)
+            .clip(true),
             close_btn,
         ]
         .align_y(Alignment::Start),
@@ -164,7 +166,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
     let addr_section = labeled_section(tr.address, addr_row.into());
 
-    let motd_text = server.motd.trim().to_string();
+    let motd_text = strip_section_codes(server.motd.trim());
     let motd_section = labeled_section(
         tr.motd,
         container(
@@ -192,10 +194,10 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     // Дополнительные ячейки, зависящие от эдишена/данных.
     let mut extra_cells: Vec<Element<'_, Message>> = Vec::new();
     if let Some(w) = &server.world {
-        extra_cells.push(stat_cell(tr.world, w.clone(), false));
+        extra_cells.push(stat_cell(tr.world, strip_section_codes(w), false));
     }
     if let Some(gm) = &server.gamemode {
-        extra_cells.push(stat_cell(tr.gamemode, gm.clone(), false));
+        extra_cells.push(stat_cell(tr.gamemode, strip_section_codes(gm), false));
     }
     if let Some(sc) = server.secure_chat {
         let v = if sc { tr.enabled } else { tr.disabled };
@@ -259,51 +261,53 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     );
 
     let samples_block = if !server.samples.is_empty() {
-        let names: Vec<&str> = server.samples.iter().take(20).map(|s| s.as_str()).collect();
-        let mut chips_col = column![].spacing(7);
-        for chunk in names.chunks(4) {
-            let mut r = row![].spacing(7);
-            for name in chunk {
-                r = r.push(player_chip(name));
-            }
-            chips_col = chips_col.push(r);
-        }
-        Some(labeled_section(tr.players_online, chips_col.into()))
+        let chips: Vec<Element<'_, Message>> = server
+            .samples
+            .iter()
+            .take(20)
+            .map(|s| player_chip(strip_section_codes(s)))
+            .collect();
+        Some(labeled_section(
+            tr.players_online,
+            wrap(chips).spacing(7.0).into(),
+        ))
     } else {
         None
     };
 
     let mods_block = if !server.mods.is_empty() {
-        let mut chips_col = column![].spacing(7);
-        for chunk in server.mods.chunks(3) {
-            let mut r = row![].spacing(7);
-            for m in chunk {
+        let chips: Vec<Element<'_, Message>> = server
+            .mods
+            .iter()
+            .map(|m| {
                 let label = if m.version.is_empty() {
                     m.id.clone()
                 } else {
                     format!("{} {}", m.id, m.version)
                 };
-                r = r.push(crate::components::ui::chip(label));
-            }
-            chips_col = chips_col.push(r);
-        }
+                crate::components::ui::chip(strip_section_codes(&label))
+            })
+            .collect();
         let title = format!("{} · {}", tr.mods, server.mods.len());
-        Some(labeled_section_owned(title, chips_col.into()))
+        Some(labeled_section_owned(
+            title,
+            wrap(chips).spacing(7.0).into(),
+        ))
     } else {
         None
     };
 
     let plugins_block = if !server.plugins.is_empty() {
-        let mut chips_col = column![].spacing(7);
-        for chunk in server.plugins.chunks(3) {
-            let mut r = row![].spacing(7);
-            for p in chunk {
-                r = r.push(crate::components::ui::chip(p.clone()));
-            }
-            chips_col = chips_col.push(r);
-        }
+        let chips: Vec<Element<'_, Message>> = server
+            .plugins
+            .iter()
+            .map(|p| crate::components::ui::chip(strip_section_codes(p)))
+            .collect();
         let title = format!("{} · {}", tr.plugins, server.plugins.len());
-        Some(labeled_section_owned(title, chips_col.into()))
+        Some(labeled_section_owned(
+            title,
+            wrap(chips).spacing(7.0).into(),
+        ))
     } else {
         None
     };
@@ -413,7 +417,7 @@ fn ping_chart<'a>(current_ping: u64, history: &[u64]) -> Element<'a, Message> {
         .into()
 }
 
-fn player_chip(name: &str) -> Element<'_, Message> {
+fn player_chip(name: String) -> Element<'static, Message> {
     let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('A') as u32;
     let idx = ((first.wrapping_mul(2654435769)) >> 28) as usize;
     const DOT_COLORS: &[Color] = &[
@@ -481,7 +485,7 @@ fn player_chip(name: &str) -> Element<'_, Message> {
                     },
                     ..Default::default()
                 }),
-            text(name.to_string())
+            text(name)
                 .size(13)
                 .font(SANS)
                 .style(|t: &Theme| text::Style {
@@ -632,7 +636,7 @@ fn stat_cell_colored<'a>(
 }
 
 fn motd_first_line(motd: &str) -> String {
-    motd.trim()
+    strip_section_codes(motd.trim())
         .split('\n')
         .next()
         .unwrap_or("")

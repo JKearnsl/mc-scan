@@ -4,6 +4,7 @@ mod config;
 mod export;
 mod i18n;
 mod styles;
+mod text;
 
 use app::McScan;
 use iced::{Font, Size, window};

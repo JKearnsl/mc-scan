@@ -93,7 +93,7 @@ fn parse_motd(raw: &str, addr: SocketAddr, latency_ms: u64) -> Option<ServerInfo
     };
 
     let mut info = ServerInfo::base(addr, Edition::Bedrock);
-    info.motd = super::strip_section_codes(parts[1]);
+    info.motd = parts[1].to_string();
     info.protocol = parts[2].parse().unwrap_or(0);
     info.version = parts[3].to_string();
     info.online = parts[4].parse().unwrap_or(0);
@@ -102,7 +102,7 @@ fn parse_motd(raw: &str, addr: SocketAddr, latency_ms: u64) -> Option<ServerInfo
     info.ping_history = vec![latency_ms];
     info.bedrock_edition = get(0);
     info.server_guid = get(6);
-    info.sub_motd = get(7).map(|s| super::strip_section_codes(&s));
+    info.sub_motd = get(7);
     info.gamemode = get(8);
     info.port_v4 = parts.get(10).and_then(|s| s.trim().parse().ok());
     info.port_v6 = parts.get(11).and_then(|s| s.trim().parse().ok());
@@ -134,7 +134,7 @@ mod tests {
         let motd = "MCPE;§eDedicated Server;390;1.14.60;5;10;1234567890;Bedrock level;Survival;1;19132;19133";
         let info = parse_pong(&pong(motd), addr(), 7).expect("should parse");
         assert_eq!(info.edition, Edition::Bedrock);
-        assert_eq!(info.motd, "Dedicated Server"); // section code stripped
+        assert_eq!(info.motd, "§eDedicated Server"); // raw code kept for CSV; GUI strips it
         assert_eq!(info.protocol, 390);
         assert_eq!(info.version, "1.14.60");
         assert_eq!(info.online, 5);
