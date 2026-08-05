@@ -211,6 +211,13 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         extra_cells.push(stat_cell(tr.mods, server.mods.len().to_string(), true));
     }
 
+    let version_expandable = is_version_expandable(&mc_version);
+    let version_cell = if version_expandable {
+        expandable_version_cell(tr.version, &mc_version, app.version_expanded)
+    } else {
+        stat_cell(tr.version, mc_version.clone(), true)
+    };
+
     let mut stats_col = column![
         row![
             stat_cell(
@@ -229,7 +236,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         ],
         Space::new().height(9),
         row![
-            stat_cell(tr.version, mc_version, true),
+            version_cell,
             Space::new().width(9),
             stat_cell(tr.protocol, server.protocol.to_string(), true),
             Space::new().width(9),
@@ -318,9 +325,10 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         addr_section,
         motd_section,
         stats_block,
-        chart_block,
     ]
     .width(Fill);
+
+    body = body.push(chart_block);
 
     if let Some(s) = mods_block {
         body = body.push(s);
@@ -572,19 +580,11 @@ fn labeled_section<'a>(label: &'a str, content: Element<'a, Message>) -> Element
 fn stat_cell<'a>(label: &'a str, value: String, mono: bool) -> Element<'a, Message> {
     container(
         column![
-            text(label)
-                .size(10)
-                .font(SANS_SEMIBOLD)
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#5C636F")
-                    } else {
-                        c("#A0A7B1")
-                    }),
-                }),
+            stat_label(label),
             Space::new().height(5),
             text(value)
                 .size(14)
+                .wrapping(text::Wrapping::None)
                 .font(if mono { MONO_SEMIBOLD } else { SANS_SEMIBOLD })
                 .style(|t: &Theme| text::Style {
                     color: Some(if is_dark(t) {
@@ -594,12 +594,138 @@ fn stat_cell<'a>(label: &'a str, value: String, mono: bool) -> Element<'a, Messa
                     }),
                 }),
         ]
-        .width(Fill),
+        .width(Fill)
+        .clip(true),
     )
     .style(stat_card_style)
     .padding(Padding::from([10, 12]))
     .width(Fill)
     .into()
+}
+
+fn stat_label(label: &str) -> Element<'_, Message> {
+    text(label)
+        .size(10)
+        .font(SANS_SEMIBOLD)
+        .style(|t: &Theme| text::Style {
+            color: Some(if is_dark(t) {
+                c("#5C636F")
+            } else {
+                c("#A0A7B1")
+            }),
+        })
+        .into()
+}
+
+/// True when the version string is too long / list-like to fit in the fixed grid
+/// cell, so it should be shown as a short summary and made expandable.
+fn is_version_expandable(v: &str) -> bool {
+    let v = v.trim();
+    !v.is_empty() && (v.contains(',') || v.chars().count() > 14)
+}
+
+/// A guaranteed-short label for the grid cell: `first +N` for a comma list, or the
+/// value truncated with an ellipsis otherwise. Kept short so it never widens the row.
+fn version_summary(v: &str) -> String {
+    let tokens: Vec<&str> = v.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
+    if tokens.len() >= 2 {
+        return format!("{} +{}", tokens[0], tokens.len() - 1);
+    }
+    let v = v.trim();
+    if v.chars().count() > 14 {
+        let head: String = v.chars().take(13).collect();
+        format!("{head}…")
+    } else {
+        v.to_string()
+    }
+}
+
+/// The version cell rendered as a button that expands the cell itself in place:
+/// collapsed it shows a short summary, expanded it grows to list every version as
+/// chips inside the same block. The chevron (top-right) signals the toggle.
+fn expandable_version_cell<'a>(
+    label: &'a str,
+    value: &str,
+    expanded: bool,
+) -> Element<'a, Message> {
+    let chevron = if expanded {
+        crate::components::ui::icons::chevron_up()
+    } else {
+        crate::components::ui::icons::chevron_down()
+    };
+
+    let header = row![
+        container(stat_label(label)).width(Fill),
+        Space::new().width(6),
+        svg(chevron)
+            .content_fit(ContentFit::Contain)
+            .width(Fixed(12.0))
+            .height(Fixed(12.0))
+            .style(|t: &Theme, _| svg::Style {
+                color: Some(if is_dark(t) {
+                    c("#6B7480")
+                } else {
+                    c("#8A929E")
+                }),
+            }),
+    ]
+    .align_y(Alignment::Center);
+
+    let content: Element<'a, Message> = if expanded {
+        let chips: Vec<Element<'a, Message>> = value
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(|s| crate::components::ui::chip(s.to_string()))
+            .collect();
+        wrap(chips).spacing(6.0).into()
+    } else {
+        text(version_summary(value))
+            .size(14)
+            .width(Fill)
+            .wrapping(text::Wrapping::None)
+            .font(MONO_SEMIBOLD)
+            .style(|t: &Theme| text::Style {
+                color: Some(if is_dark(t) {
+                    c("#E8EBF0")
+                } else {
+                    c("#161A20")
+                }),
+            })
+            .into()
+    };
+
+    button(
+        column![header, Space::new().height(6), content]
+            .width(Fill)
+            .clip(true),
+    )
+    .on_press(Message::ToggleVersionExpand)
+    .style(version_cell_style)
+    .padding(Padding::from([10, 12]))
+    .width(Fill)
+    .into()
+}
+
+fn version_cell_style(t: &Theme, status: button::Status) -> button::Style {
+    let dark = is_dark(t);
+    let base = if dark { c("#131821") } else { c("#F6F8FA") };
+    let hovered = if dark { c("#182030") } else { c("#EEF2F7") };
+    let bg = match status {
+        button::Status::Hovered | button::Status::Pressed => hovered,
+        _ => base,
+    };
+    button::Style {
+        background: Some(Background::Color(bg)),
+        text_color: if dark { c("#E8EBF0") } else { c("#161A20") },
+        border: Border {
+            color: sep_color(t),
+            width: 1.0,
+            radius: 9.0.into(),
+        },
+        shadow: Shadow::default(),
+        snap: false,
+    }
 }
 
 fn stat_cell_colored<'a>(
@@ -609,25 +735,18 @@ fn stat_cell_colored<'a>(
 ) -> Element<'a, Message> {
     container(
         column![
-            text(label)
-                .size(10)
-                .font(SANS_SEMIBOLD)
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#5C636F")
-                    } else {
-                        c("#A0A7B1")
-                    }),
-                }),
+            stat_label(label),
             Space::new().height(5),
             text(value)
                 .size(14)
+                .wrapping(text::Wrapping::None)
                 .font(MONO_SEMIBOLD)
                 .style(move |_: &Theme| text::Style {
                     color: Some(value_color)
                 }),
         ]
-        .width(Fill),
+        .width(Fill)
+        .clip(true),
     )
     .style(stat_card_style)
     .padding(Padding::from([10, 12]))

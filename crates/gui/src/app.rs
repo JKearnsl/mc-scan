@@ -58,6 +58,7 @@ pub enum Message {
     SetLanguage(Language),
     CopyAddress,
     CopiedReset,
+    ToggleVersionExpand,
     ExportResults,
     RefreshTick,
     ServerRefreshed(Option<ServerInfo>),
@@ -121,6 +122,9 @@ pub struct McScan {
     pub(crate) is_dark: bool,
     pub(crate) language: Language,
     pub(crate) copied: bool,
+    /// Whether the version cell in the server preview dialog is expanded to show
+    /// the full (possibly long) version list. Reset whenever the dialog reopens.
+    pub(crate) version_expanded: bool,
     pub(crate) refresh_index: usize,
     /// Count of input lines rejected by the last "Add ranges" confirm; drives the
     /// warning in that dialog and is 0 while there is nothing to report.
@@ -165,6 +169,7 @@ impl McScan {
             is_dark,
             language,
             copied: false,
+            version_expanded: false,
             refresh_index: 0,
             rejected_ranges: 0,
         };
@@ -278,6 +283,7 @@ impl McScan {
                 ResultsListMessage::OpenPreview(addr) => {
                     self.modal = ModalKind::ServerPreview(addr);
                     self.copied = false;
+                    self.version_expanded = false;
                     if let Some(server) = self.results.get_by_addr(addr) {
                         let edition = server.edition.clone();
                         return self.spawn_probe(addr, edition);
@@ -375,6 +381,10 @@ impl McScan {
 
             Message::CopiedReset => {
                 self.copied = false;
+            }
+
+            Message::ToggleVersionExpand => {
+                self.version_expanded = !self.version_expanded;
             }
 
             Message::ExportResults => {

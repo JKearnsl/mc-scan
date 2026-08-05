@@ -21,3 +21,5 @@ embedded_icon!(settings, SETTINGS, "settings.svg");
 embedded_icon!(plus, PLUS, "plus.svg");
 embedded_icon!(trash, TRASH, "trash.svg");
 embedded_icon!(export, EXPORT, "export.svg");
+embedded_icon!(chevron_down, CHEVRON_DOWN, "chevron_down.svg");
+embedded_icon!(chevron_up, CHEVRON_UP, "chevron_up.svg");
