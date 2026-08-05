@@ -115,27 +115,16 @@ fn players_column(
                     c("#A0A7B1")
                 }),
             }),
-        row![
-            text("●").size(8).font(MONO).style(|t: &Theme| text::Style {
+        text(format!("{} / {}", online, max))
+            .size(14)
+            .font(MONO_SEMIBOLD)
+            .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(if is_dark(t) {
-                    c("#3DD68C")
+                    c("#E8EBF0")
                 } else {
-                    c("#18A862")
+                    c("#161A20")
                 }),
             }),
-            text(format!("{} / {}", online, max))
-                .size(14)
-                .font(MONO_SEMIBOLD)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#E8EBF0")
-                    } else {
-                        c("#161A20")
-                    }),
-                }),
-        ]
-        .align_y(Alignment::Center)
-        .spacing(6),
     ]
     .spacing(3)
     .align_x(iced::alignment::Horizontal::Right)
