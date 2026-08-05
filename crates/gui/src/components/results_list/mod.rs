@@ -37,7 +37,6 @@ pub struct ResultsList {
     /// only this hash is retained, so a refresh can tell whether the favicon
     /// changed without holding the raw string alongside the decoded pixels.
     favicon_hash: HashMap<SocketAddr, u64>,
-    /// Favicon cache
     avatars_small: HashMap<SocketAddr, image::Handle>,
     avatars_large: HashMap<SocketAddr, image::Handle>,
 }

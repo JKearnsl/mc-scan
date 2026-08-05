@@ -20,7 +20,6 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<QueryData> {
 
     let session_id: i32 = 1;
 
-    // --- Step 1: handshake, challenge-token ---
     let mut hs = Vec::with_capacity(7);
     hs.extend_from_slice(&[0xFE, 0xFD, 0x09]);
     hs.extend_from_slice(&session_id.to_be_bytes());
@@ -30,7 +29,7 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<QueryData> {
     let n = timeout(dur, socket.recv(&mut buf)).await.ok()?.ok()?;
     let token = parse_challenge(&buf[..n])?;
 
-    // --- Step 2: full stat req ---
+    // The full stat request must echo the token from the handshake above.
     let mut req = Vec::with_capacity(15);
     req.extend_from_slice(&[0xFE, 0xFD, 0x00]);
     req.extend_from_slice(&session_id.to_be_bytes());

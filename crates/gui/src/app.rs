@@ -313,7 +313,6 @@ impl McScan {
             Message::CloseModal => {
                 self.modal = ModalKind::None;
                 self.copied = false;
-                // Persists edits made in the settings modal (ports, timeout, toggles).
                 self.persist();
             }
 

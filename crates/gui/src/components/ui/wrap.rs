@@ -1,10 +1,6 @@
-//! A flex-wrap row.
-//!
-//! Lays children out left→right and wraps to a new line as soon as the next
-//! child would overflow the available width. Unlike a fixed N-column grid (which
-//! forces every cell into the same slot and lets wide content spill out), each
-//! child keeps its intrinsic width and every line packs as many as fit. Height
-//! shrinks to the content; width fills the parent so wrapping has a bound.
+//! A flex-wrap row: children keep their intrinsic width and wrap to a new line
+//! when the next one would overflow. Height shrinks to content, width fills the
+//! parent. A fixed N-column grid can't do this — it forces one slot per cell.
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::renderer;

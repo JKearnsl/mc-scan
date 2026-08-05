@@ -30,8 +30,6 @@ pub fn is_dark(t: &Theme) -> bool {
     t.palette().background.r < 0.5
 }
 
-// Fonts
-
 pub const SANS: Font = Font {
     family: Family::Name("IBM Plex Sans"),
     weight: Weight::Normal,
@@ -56,8 +54,6 @@ pub const MONO_SEMIBOLD: Font = Font {
     stretch: Stretch::Normal,
     style: FontStyle::Normal,
 };
-
-// Themes
 
 pub static COLOR_THEME: Lazy<Theme> = Lazy::new(|| {
     Theme::custom(

@@ -83,11 +83,9 @@ fn build_handshake(host: &str, port: u16) -> Vec<u8> {
     packet
 }
 
-/// Hard cap on the SLP status JSON. A well-formed status (even with a 64×64
-/// favicon and a full player sample) stays well under this. The cap protects
-/// against a malicious/broken server sending a huge or negative length, which
-/// would otherwise allocate multiple gigabytes (OOM) or, for a negative VarInt
-/// widened via `as usize`, abort the process on a capacity overflow.
+/// Hard cap on the SLP status JSON, checked before allocating for it. Bounds a
+/// hostile length: a huge one would OOM, a negative VarInt widened via `as usize`
+/// would abort on capacity overflow. Real statuses stay far below 4 MiB.
 const MAX_STATUS_BYTES: usize = 4 * 1024 * 1024;
 
 async fn read_response(stream: &mut TcpStream) -> Result<Value, Miss> {

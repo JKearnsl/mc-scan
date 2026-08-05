@@ -1,7 +1,3 @@
-//! GUI-free core of mc-scan: probes Minecraft servers (Java/Bedrock/Query and
-//! online-mode detection) and serializes the results. Depends on no `iced`/UI
-//! crate, so it can back the GUI, a headless/CLI runner, or fast unit tests.
-
 mod bedrock;
 pub mod export;
 mod java;
@@ -17,10 +13,8 @@ use std::sync::Arc;
 use tracing::trace;
 use types::{Edition, ScanConfig, ServerInfo};
 
-/// Why a probe produced no `ServerInfo`. Splits a network-level miss (host almost
-/// certainly dead/filtered) from a response that arrived but failed to parse
-/// (a possible parser bug or a hostile/non-standard server) — the distinction the
-/// silent `None` used to hide.
+
+
 #[derive(Debug)]
 pub(crate) enum Miss {
     /// No usable connection or response (timeout, refused, unreachable, short read).
@@ -74,13 +68,13 @@ pub async fn probe_server(
     match edition {
         Edition::Java => {
             let mut info = java::probe(addr, timeout_ms).await?;
-            // Query
             if query_enabled {
                 match query::probe(addr, timeout_ms).await {
                     Some(q) => {
                         info.world = q.world;
                         info.plugins = q.plugins;
-                        // Query отдаёт полный список игроков, а SLP — лишь усечённый sample.
+                        // Prefer the query roster over the truncated SLP sample; the
+                        // ids belong to that sample, so drop them with it.
                         if !q.players.is_empty() {
                             info.samples = q.players;
                             info.sample_ids.clear();
@@ -89,7 +83,6 @@ pub async fn probe_server(
                     None => trace!(%addr, "query enrichment returned nothing"),
                 }
             }
-            // Detect online/offline-mode
             if online_mode_check {
                 info.online_mode = login::probe(addr, info.protocol, timeout_ms).await;
                 trace!(%addr, online_mode = ?info.online_mode, "online-mode probe");
