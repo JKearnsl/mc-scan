@@ -319,14 +319,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         None
     };
 
-    let mut body = column![
-        header,
-        separator,
-        addr_section,
-        motd_section,
-        stats_block,
-    ]
-    .width(Fill);
+    let mut body = column![header, separator, addr_section, motd_section, stats_block,].width(Fill);
 
     body = body.push(chart_block);
 
@@ -627,7 +620,11 @@ fn is_version_expandable(v: &str) -> bool {
 /// A guaranteed-short label for the grid cell: `first +N` for a comma list, or the
 /// value truncated with an ellipsis otherwise. Kept short so it never widens the row.
 fn version_summary(v: &str) -> String {
-    let tokens: Vec<&str> = v.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
+    let tokens: Vec<&str> = v
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect();
     if tokens.len() >= 2 {
         return format!("{} +{}", tokens[0], tokens.len() - 1);
     }

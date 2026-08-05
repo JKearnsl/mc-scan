@@ -13,8 +13,6 @@ use std::sync::Arc;
 use tracing::trace;
 use types::{Edition, ScanConfig, ServerInfo};
 
-
-
 #[derive(Debug)]
 pub(crate) enum Miss {
     /// No usable connection or response (timeout, refused, unreachable, short read).
