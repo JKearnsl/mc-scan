@@ -2,7 +2,6 @@ mod avatar;
 mod item;
 pub mod preview_dialog;
 mod toolbar;
-mod virtual_list;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -17,8 +16,8 @@ use crate::text::strip_section_codes;
 use scanner::types::{Edition, ServerInfo};
 
 use avatar::{AvatarSize, favicon_handle};
+use crate::components::ui::VirtualList;
 use item::{CARD_HEIGHT, server_card_content};
-use virtual_list::VirtualList;
 
 const LIST_PADDING: Padding = Padding {
     top: 12.0,

@@ -13,7 +13,10 @@ use crate::styles::{MONO_SEMIBOLD, SANS, c, is_dark};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
     let header = container(header_col(app))
-        .style(header_style_fn)
+        .style(|_t| container::Style {
+            background: None,
+            ..Default::default()
+        })
         .padding(Padding {
             top: 18.0,
             right: 20.0,
@@ -106,11 +109,4 @@ fn title_row(app: &McScan) -> Element<'_, Message> {
     }
 
     r.into()
-}
-
-fn header_style_fn(_t: &Theme) -> container::Style {
-    container::Style {
-        background: None,
-        ..Default::default()
-    }
 }

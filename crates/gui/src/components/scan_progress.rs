@@ -1,9 +1,10 @@
 use iced::Length::Fixed;
 use iced::widget::space::Space;
-use iced::widget::{column, progress_bar, row, text};
-use iced::{Alignment, Border, Color, Element, Fill, Theme};
+use iced::widget::{column, row, text};
+use iced::{Alignment, Element, Fill, Theme};
 
 use crate::app::{McScan, Message};
+use crate::components::ui::progress_bar;
 use crate::styles::{MONO, c, is_dark};
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -20,10 +21,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     let total = app.total_targets;
 
     column![
-        progress_bar(0.0..=1.0, ratio)
-            .style(progress_bar_style)
-            .girth(Fixed(4.0))
-            .length(Fill),
+        progress_bar(ratio),
         Space::new().height(Fixed(9.0)),
         row![
             text(format!("{} {}", tr.scanning, range_str))
@@ -51,24 +49,4 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         .align_y(Alignment::Center),
     ]
     .into()
-}
-
-fn progress_bar_style(t: &Theme) -> iced::widget::progress_bar::Style {
-    progress_bar::Style {
-        background: iced::Background::Color(if is_dark(t) {
-            c("#1A1F27")
-        } else {
-            c("#E1E5EA")
-        }),
-        bar: iced::Background::Color(if is_dark(t) {
-            c("#3DD68C")
-        } else {
-            c("#18A862")
-        }),
-        border: Border {
-            radius: 2.0.into(),
-            width: 0.0,
-            color: Color::TRANSPARENT,
-        },
-    }
 }

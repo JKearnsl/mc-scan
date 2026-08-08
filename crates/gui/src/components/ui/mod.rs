@@ -2,56 +2,27 @@ mod badge;
 mod button;
 mod checkbox;
 mod dialog;
+mod divider;
 pub mod icons;
 mod input;
 mod popover;
+mod progress_bar;
 mod scrollbar;
+mod section_label;
 mod textarea;
+mod virtual_list;
 mod wrap;
 
 pub use badge::{chip, status};
 pub use button::{BtnVariant, btn, button_danger, button_primary};
 pub use checkbox::checkbox;
 pub use dialog::dialog;
+pub use divider::divider;
 pub use input::{labeled_input, search_input};
 pub use popover::popover;
+pub use progress_bar::progress_bar;
 pub use scrollbar::scrollbar;
+pub use section_label::section_label;
 pub use textarea::textarea;
+pub use virtual_list::VirtualList;
 pub use wrap::wrap;
-
-use iced::Length::Fixed;
-use iced::widget::container::Style as ContainerStyle;
-use iced::widget::{Space, container};
-use iced::{Background, Element, Fill, Theme};
-
-use crate::styles::{SANS_SEMIBOLD, c, is_dark};
-
-pub fn section_label<'a, M: Clone + 'a>(label: &'a str) -> Element<'a, M> {
-    use iced::widget::text;
-    text(label)
-        .size(11)
-        .font(SANS_SEMIBOLD)
-        .style(|t: &Theme| text::Style {
-            color: Some(if is_dark(t) {
-                c("#5C636F")
-            } else {
-                c("#A0A7B1")
-            }),
-        })
-        .into()
-}
-
-pub fn divider<'a, M: Clone + 'a>() -> Element<'a, M> {
-    container(Space::new())
-        .style(|t: &Theme| ContainerStyle {
-            background: Some(Background::Color(if is_dark(t) {
-                c("#1A1F27")
-            } else {
-                c("#E1E5EA")
-            })),
-            ..Default::default()
-        })
-        .width(Fill)
-        .height(Fixed(1.0))
-        .into()
-}

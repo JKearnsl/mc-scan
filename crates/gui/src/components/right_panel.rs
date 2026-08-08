@@ -100,19 +100,15 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         .width(Fill)
         .height(Fill),
     )
-    .style(panel_style)
-    .width(Fixed(340.0))
-    .height(Fill)
-    .into()
-}
-
-fn panel_style(t: &Theme) -> ContainerStyle {
-    ContainerStyle {
+    .style(|t| ContainerStyle {
         background: Some(Background::Color(if is_dark(t) {
             c("#0B0E13")
         } else {
             c("#FFFFFF")
         })),
         ..Default::default()
-    }
+    })
+    .width(Fixed(340.0))
+    .height(Fill)
+    .into()
 }
