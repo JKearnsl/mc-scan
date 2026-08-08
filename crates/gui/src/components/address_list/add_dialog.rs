@@ -42,8 +42,6 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     )
 }
 
-/// Warns about input lines the last confirm couldn't parse (they are left in the
-/// editor for correction). Collapses to nothing when there is nothing to report.
 fn rejected_notice(app: &McScan) -> Element<'_, Message> {
     if app.rejected_ranges == 0 {
         return Space::new().height(0).into();

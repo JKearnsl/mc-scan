@@ -14,12 +14,11 @@ pub async fn probe(addr: SocketAddr, timeout_ms: u64) -> Option<ServerInfo> {
             debug!(%addr, edition = "java", version = %info.version, online = info.online, "found");
             Some(info)
         }
-        // Response arrived but didn't parse: notable (parser bug or odd server).
         Err(Miss::Unparsed(stage)) => {
             debug!(%addr, edition = "java", stage, "response did not parse");
             None
         }
-        // No/short connection: the common case on a wide scan, kept at trace.
+        // The common case on a wide scan, kept at trace.
         Err(Miss::Unreachable(stage)) => {
             trace!(%addr, edition = "java", stage, "unreachable");
             None
@@ -83,13 +82,11 @@ fn build_handshake(host: &str, port: u16) -> Vec<u8> {
     packet
 }
 
-/// Hard cap on the SLP status JSON, checked before allocating for it. Bounds a
-/// hostile length: a huge one would OOM, a negative VarInt widened via `as usize`
-/// would abort on capacity overflow. Real statuses stay far below 4 MiB.
+// Cap checked before allocating: a hostile or negative-VarInt length would
+// otherwise OOM or abort on capacity overflow. Real statuses stay well below.
 const MAX_STATUS_BYTES: usize = 4 * 1024 * 1024;
 
 async fn read_response(stream: &mut TcpStream) -> Result<Value, Miss> {
-    // Buffer the response so each VarInt byte isn't a separate await/syscall.
     let mut reader = BufReader::new(stream);
     let _len = read_varint(&mut reader)
         .await
@@ -163,7 +160,7 @@ fn parse_samples(v: &Value) -> (Vec<String>, Vec<String>) {
     (names, ids)
 }
 
-/// Mods list from `forgeData.mods[]` (FML2/NeoForge) or `modinfo.modList[]` (old FML).
+// forgeData.mods[] is FML2/NeoForge; modinfo.modList[] is old FML.
 fn parse_mods(json: &Value) -> Vec<ModInfo> {
     if let Some(arr) = json["forgeData"]["mods"].as_array() {
         return arr
@@ -197,9 +194,7 @@ fn parse_mods(json: &Value) -> Vec<ModInfo> {
     Vec::new()
 }
 
-/// Flattens the description component tree into plain text, keeping the raw
-/// `§` formatting codes intact. Stripping them is a display concern handled by
-/// the GUI at render time, so the CSV export retains the original codes.
+// Keeps raw `§` codes intact so CSV export retains them; the GUI strips them.
 fn parse_description(v: &Value) -> String {
     match v {
         Value::String(s) => s.clone(),
@@ -226,7 +221,6 @@ mod tests {
     use super::*;
     use tokio::net::TcpListener;
 
-    /// Serve `bytes` to a single client and run `read_response` against it.
     async fn read_response_of(bytes: Vec<u8>) -> Result<Value, Miss> {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -241,7 +235,7 @@ mod tests {
     }
 
     fn framed_status(json: &[u8]) -> Vec<u8> {
-        let mut inner = vec![0x00]; // packet id
+        let mut inner = vec![0x00];
         write_varint(&mut inner, json.len() as i32);
         inner.extend_from_slice(json);
         let mut packet = Vec::new();
@@ -252,8 +246,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_negative_status_length() {
-        // len=5, id=0x00, str_len = VarInt(-1) = FF FF FF FF 0F.
-        // Without the guard this aborts the process on `vec!` capacity overflow.
+        // str_len = VarInt(-1); without the guard this aborts on capacity overflow.
         let bytes = vec![0x05, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F];
         assert!(matches!(
             read_response_of(bytes).await,
@@ -263,7 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_oversized_status_length() {
-        // str_len = VarInt(i32::MAX) = FF FF FF FF 07 (~2 GiB) => rejected by cap.
+        // str_len = VarInt(i32::MAX) (~2 GiB) => rejected by cap.
         let bytes = vec![0x05, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x07];
         assert!(matches!(
             read_response_of(bytes).await,
@@ -293,7 +286,6 @@ mod tests {
     #[test]
     fn description_keeps_raw_codes_and_walks_extra() {
         use serde_json::json;
-        // Formatting codes are preserved verbatim; the GUI strips them for display.
         assert_eq!(parse_description(&json!("§aHello")), "§aHello");
         assert_eq!(
             parse_description(&json!({"text": "A", "extra": [{"text": "B"}, "C"]})),

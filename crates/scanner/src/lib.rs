@@ -15,9 +15,7 @@ use types::{Edition, ScanConfig, ServerInfo};
 
 #[derive(Debug)]
 pub(crate) enum Miss {
-    /// No usable connection or response (timeout, refused, unreachable, short read).
     Unreachable(&'static str),
-    /// Bytes arrived but did not parse as the expected protocol.
     Unparsed(&'static str),
 }
 
@@ -71,8 +69,7 @@ pub async fn probe_server(
                     Some(q) => {
                         info.world = q.world;
                         info.plugins = q.plugins;
-                        // Prefer the query roster over the truncated SLP sample; the
-                        // ids belong to that sample, so drop them with it.
+                        // The ids belong to the SLP sample we're replacing, so drop them too.
                         if !q.players.is_empty() {
                             info.samples = q.players;
                             info.sample_ids.clear();

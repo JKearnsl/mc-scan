@@ -1,8 +1,21 @@
 use iced::Length::Fixed;
-use iced::widget::{row, text, text_input};
+use iced::widget::{TextInput, row, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Fill, Padding, Theme};
 
 use crate::styles::{MONO, SANS, c, is_dark};
+
+pub fn search_input<'a, M: Clone + 'a>(
+    value: &'a str,
+    placeholder: &'a str,
+    on_change: impl Fn(String) -> M + 'a,
+) -> TextInput<'a, M> {
+    text_input(placeholder, value)
+        .on_input(on_change)
+        .padding(Padding::from([7, 10]))
+        .size(13)
+        .font(SANS)
+        .style(text_input_style)
+}
 
 pub fn labeled_input<'a, M: Clone + 'a>(
     label: &'a str,

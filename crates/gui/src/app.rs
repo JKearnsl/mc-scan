@@ -117,17 +117,11 @@ pub struct McScan {
     pub(crate) modal: ModalKind,
     pub(crate) ranges_editor: iced::widget::text_editor::Content,
     pub(crate) theme_pref: crate::config::ThemePref,
-    /// Resolved from `theme_pref`: for `System` it tracks the OS scheme reported
-    /// by the color-scheme subscription; otherwise it is fixed by the preference.
     pub(crate) is_dark: bool,
     pub(crate) language: Language,
     pub(crate) copied: bool,
-    /// Whether the version cell in the server preview dialog is expanded to show
-    /// the full (possibly long) version list. Reset whenever the dialog reopens.
     pub(crate) version_expanded: bool,
     pub(crate) refresh_index: usize,
-    /// Count of input lines rejected by the last "Add ranges" confirm; drives the
-    /// warning in that dialog and is 0 while there is nothing to report.
     pub(crate) rejected_ranges: usize,
 }
 
@@ -135,14 +129,12 @@ impl McScan {
     pub fn init() -> (Self, Task<Message>) {
         let cfg = crate::config::load().unwrap_or_default();
 
-        let language =
-            crate::config::language_from_code(&cfg.language).unwrap_or_else(Language::detect);
+        let language = cfg.language.resolve();
         let mut address_list = AddressList::default();
         address_list.push_ranges(parse_ip_ranges(&cfg.ranges.join("\n")));
 
-        let theme_pref = crate::config::ThemePref::from_code(&cfg.theme);
-        // `System` starts dark and is corrected by the color-scheme subscription's
-        // first emission; the explicit prefs are already final.
+        let theme_pref = cfg.theme;
+
         let is_dark = theme_pref != crate::config::ThemePref::Light;
 
         let app = Self {
@@ -179,9 +171,6 @@ impl McScan {
         )
     }
 
-    /// Persist the settings that should survive a restart (ranges, ports, theme,
-    /// language, toggles). Best-effort; called at natural boundaries rather than
-    /// on every keystroke.
     fn persist(&self) {
         crate::config::save(&crate::config::Config {
             ranges: self
@@ -196,8 +185,8 @@ impl McScan {
             timeout_ms: self.settings.timeout_ms.clone(),
             query_enabled: self.settings.query_enabled,
             online_mode_check: self.settings.online_mode_check,
-            theme: self.theme_pref.code().to_string(),
-            language: crate::config::language_code(self.language).to_string(),
+            theme: self.theme_pref,
+            language: self.language.into(),
         });
     }
 
@@ -289,6 +278,36 @@ impl McScan {
                         return self.spawn_probe(addr, edition);
                     }
                 }
+                ResultsListMessage::SearchInput(text) => {
+                    let generation = self.results.set_search_input(text);
+                    let (tx, rx) = oneshot::channel::<()>();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(Duration::from_millis(220));
+                        let _ = tx.send(());
+                    });
+                    return Task::perform(
+                        async move {
+                            let _ = rx.await;
+                        },
+                        move |_| Message::ResultsList(ResultsListMessage::SearchApply(generation)),
+                    );
+                }
+                ResultsListMessage::SearchApply(generation) => {
+                    self.results.apply_search(generation)
+                }
+                ResultsListMessage::ToggleSortMenu => self.results.toggle_sort_menu(),
+                ResultsListMessage::ToggleFilterMenu => self.results.toggle_filter_menu(),
+                ResultsListMessage::DismissMenus => self.results.close_menus(),
+                ResultsListMessage::SortPicked(key) => {
+                    self.results.set_sort(key);
+                    self.results.close_menus();
+                }
+                ResultsListMessage::SortDescending(desc) => self.results.set_sort_descending(desc),
+                ResultsListMessage::EditionPicked(edition) => self.results.set_edition(edition),
+                ResultsListMessage::OnlineModePicked(mode) => self.results.set_online_mode(mode),
+                ResultsListMessage::VersionFilter(text) => self.results.set_version_filter(text),
+                ResultsListMessage::PluginFilter(text) => self.results.set_plugin_filter(text),
+                ResultsListMessage::ResetFilters => self.results.reset_filters(),
             },
 
             Message::JavaPortsChanged(v) => {
@@ -327,8 +346,6 @@ impl McScan {
                     self.ranges_editor = iced::widget::text_editor::Content::new();
                     self.modal = ModalKind::None;
                 } else {
-                    // Keep the dialog open with only the unparsed lines so the
-                    // user can see and fix them; the valid ones were added.
                     self.ranges_editor =
                         iced::widget::text_editor::Content::with_text(&rejected.join("\n"));
                 }
@@ -340,7 +357,6 @@ impl McScan {
                 match pref {
                     crate::config::ThemePref::Dark => self.is_dark = true,
                     crate::config::ThemePref::Light => self.is_dark = false,
-                    // Leave is_dark until the subscription reports the OS scheme.
                     crate::config::ThemePref::System => {}
                 }
                 self.persist();
@@ -389,7 +405,6 @@ impl McScan {
             Message::ExportResults => {
                 if self.results.count() > 0 {
                     let csv = crate::export::to_csv(self.results.items());
-                    // Drive the dialog future to completion off the UI thread.
                     RUNTIME.spawn(crate::export::save_dialog(csv));
                 }
             }
@@ -449,7 +464,6 @@ impl McScan {
             Subscription::none()
         };
 
-        // Only follow the OS scheme while the user is on "System".
         let theme_sub = if self.theme_pref == crate::config::ThemePref::System {
             Subscription::run_with(THEME_SUB_ID, system_color_scheme_stream)
         } else {
@@ -576,8 +590,6 @@ fn refresh_timer_stream(_: &u8) -> BoxStream<'static, Message> {
     Box::pin(rx)
 }
 
-// Emits the OS color scheme now and whenever it changes. `NoPreference` (unknown
-// or unset) is treated as dark to match the app's dark-first palette.
 fn system_color_scheme_stream(_: &u8) -> BoxStream<'static, Message> {
     use mundy::{ColorScheme, Interest, Preferences};
     Box::pin(
@@ -591,7 +603,6 @@ struct ScanKey {
     config: Arc<ScanConfig>,
 }
 
-// Subscription identity is the id alone; the config must not be hashed.
 impl std::hash::Hash for ScanKey {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
@@ -602,9 +613,6 @@ fn build_scan_stream(key: &ScanKey) -> BoxStream<'static, Message> {
     let config = key.config.clone();
     let (tx, rx) = mpsc::unbounded();
 
-    // Runs on the shared runtime rather than spawning a fresh OS thread + tokio
-    // runtime per scan. The task ends on its own when the subscription is dropped
-    // (the receiver goes away and the sends start failing).
     RUNTIME.spawn(async move {
         let mut stream = Box::pin(scanner::scan(config));
         let mut scanned = 0usize;

@@ -12,9 +12,8 @@ pub fn parse_ip_ranges(input: &str) -> Vec<IpNet> {
     parse_ip_ranges_reporting(input).0
 }
 
-/// Like [`parse_ip_ranges`] but also returns the non-empty lines that produced
-/// no networks (unparsable, wrong family, or reversed range) so the UI can tell
-/// the user which input was dropped instead of silently ignoring it.
+// Also returns non-empty lines that produced no networks, so the UI can report
+// which input was dropped instead of silently ignoring it.
 pub fn parse_ip_ranges_reporting(input: &str) -> (Vec<IpNet>, Vec<String>) {
     let mut result = Vec::new();
     let mut rejected = Vec::new();
@@ -125,7 +124,6 @@ mod tests {
         let (nets, rejected) = parse_ip_ranges_reporting(
             "10.0.0.0/24\n\ngarbage\n2001:db8::1-10.0.0.5\n10.0.0.9-10.0.0.1\n",
         );
-        // Only the valid CIDR is kept; blank lines are skipped, not rejected.
         assert_eq!(nets, vec!["10.0.0.0/24".parse().unwrap()]);
         assert_eq!(
             rejected,
@@ -193,7 +191,6 @@ mod tests {
     #[test]
     fn blank_and_unparsable_lines_are_skipped() {
         assert!(nets("\n   \nnot-an-ip\n").is_empty());
-        // Valid lines survive alongside junk ones.
         assert_eq!(
             nets("garbage\n10.0.0.1\n"),
             vec!["10.0.0.1/32".parse().unwrap()]

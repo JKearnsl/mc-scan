@@ -1,12 +1,5 @@
-//! Display-time text cleanup.
-//!
-//! Servers embed Minecraft `§`-formatting codes (colours, bold, …) in their
-//! MOTD, version, player and plugin strings. The scanner stores those strings
-//! verbatim so the CSV export keeps them; the GUI strips them here so the codes
-//! never leak into the rendered text.
-
-/// Removes every `§X` formatting code (the `§` and the character after it).
-/// A dangling trailing `§` is dropped too.
+// Strips Minecraft `§X` formatting codes (and a dangling trailing `§`). The
+// scanner keeps them verbatim for CSV export; the GUI strips them for display.
 pub fn strip_section_codes(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars();
@@ -36,7 +29,6 @@ mod tests {
 
     #[test]
     fn drops_a_dangling_section_sign() {
-        // A trailing `§` with no following char is consumed, not emitted.
         assert_eq!(strip_section_codes("abc§"), "abc");
     }
 }

@@ -36,34 +36,23 @@ pub struct ServerInfo {
     pub samples: Vec<String>,
     pub ping_history: Vec<u64>,
 
-    // --- Java extras (SLP status) ---
-    /// data-URI base64 PNG 64×64.
+    // Java extras (SLP status)
     pub favicon: Option<String>,
-    /// UUID players
     pub sample_ids: Vec<String>,
-    /// secure chat (1.19+).
     pub secure_chat: Option<bool>,
-    /// Mods Forge/NeoForge with versions.
     pub mods: Vec<ModInfo>,
 
-    // --- Query full stat (enable-query=true) ---
-    /// World name (`map`).
+    // Query full stat (enable-query=true)
     pub world: Option<String>,
-    /// Plugins list.
     pub plugins: Vec<String>,
 
-    // --- Login ---
-    /// online-mode (Some(true)) / offline-mode aka cracked (Some(false)) / undefined (None).
+    // Some(true)=online, Some(false)=cracked, None=undetermined
     pub online_mode: Option<bool>,
 
-    // --- Bedrock extras (unconnected pong) ---
-    /// Edition-string Bedrock (MCPE/MCEE).
+    // Bedrock extras (unconnected pong)
     pub bedrock_edition: Option<String>,
-    /// Server GUID.
     pub server_guid: Option<String>,
-    /// Sub MOTD.
     pub sub_motd: Option<String>,
-    /// Gamemode (Survival/Creative/…).
     pub gamemode: Option<String>,
     pub port_v4: Option<u16>,
     pub port_v6: Option<u16>,
@@ -116,8 +105,7 @@ impl ScanConfig {
     }
 }
 
-/// Number of probeable hosts in `net`, matching `IpNet::hosts()`: IPv4 excludes
-/// network and broadcast (except /31 and /32), IPv6 includes every address.
+// Matches IpNet::hosts(): IPv4 excludes network+broadcast (except /31, /32).
 pub fn host_count(net: &IpNet) -> u128 {
     match net {
         IpNet::V4(n) => match n.prefix_len() {

@@ -60,8 +60,7 @@ impl AddressList {
     pub fn view(&self) -> Element<'_, AddressListMessage> {
         let trash_handle = crate::components::ui::icons::trash();
 
-        // Fallback threshold: if too many items to fit in a typical panel height,
-        // assume scrollbar is visible before the user has scrolled
+        // Assume a scrollbar past a panelful, before the user has scrolled.
         let is_scrollable = self.is_scrollable || self.values.len() > 15;
 
         let mut list = column![].spacing(2);

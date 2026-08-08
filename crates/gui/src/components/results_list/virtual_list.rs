@@ -1,13 +1,6 @@
-//! A virtualized vertical list of cards of a fixed height.
-//!
-//! Unlike `column` inside `scrollable`, it constructs and lays out **only**
-//! cards visible in the window, so the frame cost does not depend on the total number
-//! of results. It is itself a scroll container: it maintains the offset in the state,
-//! handles the wheel and the slider dragging, and draws its own scrollbar.
-//!
-//! The technique of constructing content in `layout` (rather than `view`) is borrowed from
-//! `iced::widget::responsive`: `diff` is deferred, and reconciliation of the state tree of
-//! children is done via `tree.diff_children` after the
+//! Virtualized fixed-height card list: only visible cards are built and laid
+//! out. Content is built in `layout` (not `view`) as in `iced::widget::responsive`,
+//! so `diff` is deferred and children reconcile via `tree.diff_children` once the
 //! visible range is known.
 
 use iced::advanced::layout::{self, Layout};
@@ -202,6 +195,9 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
+        let bounds = layout.bounds();
+        let child_cursor = clip_cursor(cursor, bounds);
+
         for ((child, child_tree), child_layout) in self
             .content
             .iter_mut()
@@ -212,7 +208,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
                 child_tree,
                 event,
                 child_layout,
-                cursor,
+                child_cursor,
                 renderer,
                 clipboard,
                 shell,
@@ -223,8 +219,6 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         if shell.is_event_captured() {
             return;
         }
-
-        let bounds = layout.bounds();
 
         match event {
             Event::Mouse(mouse::Event::WheelScrolled { delta }) => {
@@ -302,6 +296,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         _viewport: &Rectangle,
     ) {
         let bounds = layout.bounds();
+        let child_cursor = clip_cursor(cursor, bounds);
 
         renderer.with_layer(bounds, |renderer| {
             for ((child, child_tree), child_layout) in self
@@ -317,7 +312,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
                         theme,
                         style,
                         child_layout,
-                        cursor,
+                        child_cursor,
                         &bounds,
                     );
                 }
@@ -376,6 +371,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
         viewport: &Rectangle,
         renderer: &iced::Renderer,
     ) -> mouse::Interaction {
+        let child_cursor = clip_cursor(cursor, layout.bounds());
         for ((child, child_tree), child_layout) in self
             .content
             .iter()
@@ -385,7 +381,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
             let interaction = child.as_widget().mouse_interaction(
                 child_tree,
                 child_layout,
-                cursor,
+                child_cursor,
                 viewport,
                 renderer,
             );
@@ -394,6 +390,15 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for VirtualList<'_, Message
             }
         }
         mouse::Interaction::None
+    }
+}
+
+// Rows scrolled under the header keep bounds reaching into it; hide the cursor
+// from children outside the viewport so they don't catch clicks/hover through it.
+fn clip_cursor(cursor: mouse::Cursor, bounds: Rectangle) -> mouse::Cursor {
+    match cursor.position() {
+        Some(p) if bounds.contains(p) => cursor,
+        _ => mouse::Cursor::Unavailable,
     }
 }
 

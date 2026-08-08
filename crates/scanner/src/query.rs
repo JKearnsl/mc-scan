@@ -62,7 +62,6 @@ fn parse_full_stat(data: &[u8]) -> Option<QueryData> {
     }
     let body = data[5..].strip_prefix(KV_PREFIX)?;
 
-    // KV
     let mut cur = 0usize;
     let mut world = None;
     let mut plugins_raw = None;

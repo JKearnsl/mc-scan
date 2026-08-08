@@ -1,22 +1,14 @@
-//! Validated newtypes for the scan configuration. Settings arrive as free-text
-//! fields; parsing them here keeps the defaults and clamps in one place, so no
-//! call site repeats `unwrap_or(1024)` or an ad-hoc `.min()`/`.max()`.
-
 use std::ops::Deref;
 
-/// Number of concurrent probes (the `buffer_unordered` fan-out).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Concurrency(usize);
 
 impl Concurrency {
     pub const MIN: usize = 1;
-    // Kept under the fd limit raised in main (>= 10240 on unix) with headroom
-    // for the window/GPU.
+    // Kept under the fd limit raised in main, with headroom for the window/GPU.
     pub const MAX: usize = 8192;
     pub const DEFAULT: usize = 1024;
 
-    /// Parse a user-entered value, falling back to the default and clamping to
-    /// the safe range — so callers always get a usable value.
     pub fn from_input(raw: &str) -> Self {
         Self(
             raw.trim()
@@ -37,7 +29,6 @@ impl Default for Concurrency {
     }
 }
 
-/// Per-probe timeout in milliseconds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TimeoutMs(u64);
 
@@ -60,7 +51,6 @@ impl Default for TimeoutMs {
     }
 }
 
-/// A parsed list of ports; entries that are not a valid `u16` are dropped.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Ports(Vec<u16>);
 

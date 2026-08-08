@@ -117,8 +117,7 @@ mod tests {
         SocketAddr::from(([127, 0, 0, 1], 19132))
     }
 
-    /// Wrap a MOTD string in a well-formed unconnected pong:
-    /// `0x1C` + timestamp(8) + GUID(8) + MAGIC(16) + len(u16) + motd.
+    // 0x1C + timestamp(8) + GUID(8) + MAGIC(16) + len(u16) + motd.
     fn pong(motd: &str) -> Vec<u8> {
         let mut p = vec![0x1C];
         p.extend_from_slice(&0u64.to_be_bytes());
@@ -134,7 +133,7 @@ mod tests {
         let motd = "MCPE;§eDedicated Server;390;1.14.60;5;10;1234567890;Bedrock level;Survival;1;19132;19133";
         let info = parse_pong(&pong(motd), addr(), 7).expect("should parse");
         assert_eq!(info.edition, Edition::Bedrock);
-        assert_eq!(info.motd, "§eDedicated Server"); // raw code kept for CSV; GUI strips it
+        assert_eq!(info.motd, "§eDedicated Server");
         assert_eq!(info.protocol, 390);
         assert_eq!(info.version, "1.14.60");
         assert_eq!(info.online, 5);
@@ -150,7 +149,6 @@ mod tests {
 
     #[test]
     fn parses_minimal_pong_without_optional_fields() {
-        // Only the six required fields; optionals stay None.
         let info = parse_pong(&pong("MCPE;Hi;390;1.14.60;0;20"), addr(), 0).expect("should parse");
         assert_eq!(info.motd, "Hi");
         assert_eq!(info.max_players, 20);
@@ -174,7 +172,6 @@ mod tests {
     #[test]
     fn rejects_length_past_end_of_buffer() {
         let mut bytes = pong("MCPE;Hi;390;1.0;0;1");
-        // Claim a MOTD far longer than what follows.
         bytes[33..35].copy_from_slice(&9999u16.to_be_bytes());
         assert!(parse_pong(&bytes, addr(), 0).is_none());
     }

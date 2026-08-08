@@ -1,6 +1,5 @@
-//! A flex-wrap row: children keep their intrinsic width and wrap to a new line
-//! when the next one would overflow. Height shrinks to content, width fills the
-//! parent. A fixed N-column grid can't do this — it forces one slot per cell.
+//! Flex-wrap row: children keep their intrinsic width and wrap when the next
+//! would overflow. Height shrinks to content, width fills the parent.
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::renderer;
@@ -14,7 +13,6 @@ pub struct Wrap<'a, Message> {
     line_spacing: f32,
 }
 
-/// A flex-wrap row of `children`. Set the gaps with [`Wrap::spacing`].
 pub fn wrap<'a, Message>(children: Vec<Element<'a, Message>>) -> Wrap<'a, Message> {
     Wrap {
         children,
@@ -24,8 +22,6 @@ pub fn wrap<'a, Message>(children: Vec<Element<'a, Message>>) -> Wrap<'a, Messag
 }
 
 impl<Message> Wrap<'_, Message> {
-    /// Sets both the horizontal gap between items and the vertical gap between
-    /// lines.
     pub fn spacing(mut self, spacing: f32) -> Self {
         self.spacing = spacing;
         self.line_spacing = spacing;
@@ -66,8 +62,7 @@ impl<Message> Widget<Message, Theme, iced::Renderer> for Wrap<'_, Message> {
                 .layout(child_tree, renderer, &child_limits);
             let size = node.size();
 
-            // Wrap before placing when this child would overflow the current line
-            // (but never wrap an empty line — a lone oversized child stays put).
+            // Never wrap an empty line, so a lone oversized child stays put.
             if x > 0.0 && x + size.width > max_width {
                 x = 0.0;
                 y += line_height + self.line_spacing;

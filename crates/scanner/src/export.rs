@@ -1,13 +1,9 @@
-//! CSV serialization of scan results (RFC 4180). The native "save as" dialog
-//! lives in the GUI crate; this half is pure and reusable by a headless caller.
-
 use crate::types::{Edition, ServerInfo};
 
 const HEADER: &str = "addr,edition,version,protocol,online,max_players,latency_ms,\
 online_mode,secure_chat,motd,players,world,plugins,mods,gamemode,bedrock_edition,sub_motd";
 
-/// Serialize results as RFC 4180 CSV. Nested fields (players, plugins, mods) are
-/// flattened into a single `;`-separated cell.
+// RFC 4180 CSV; nested fields (players, plugins, mods) join into one `;`-cell.
 pub fn to_csv(items: &[ServerInfo]) -> String {
     let mut out = String::with_capacity(HEADER.len() + items.len() * 96);
     out.push_str(HEADER);
@@ -102,7 +98,6 @@ mod tests {
         let cols = HEADER.split(',').count();
         let csv = to_csv(&[server(25565)]);
         let row = csv.lines().nth(1).unwrap();
-        // No field here needs quoting, so a plain split is accurate.
         assert_eq!(row.split(',').count(), cols);
     }
 

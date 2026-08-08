@@ -1,8 +1,10 @@
 mod avatar;
 mod item;
 pub mod preview_dialog;
+mod toolbar;
 mod virtual_list;
 
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
@@ -11,7 +13,8 @@ use iced::{Background, Border, Element, Fill, Padding, Shadow, Theme};
 
 use crate::i18n::Tr;
 use crate::styles::{SANS, c, is_dark};
-use scanner::types::ServerInfo;
+use crate::text::strip_section_codes;
+use scanner::types::{Edition, ServerInfo};
 
 use avatar::{AvatarSize, favicon_handle};
 use item::{CARD_HEIGHT, server_card_content};
@@ -25,31 +28,86 @@ const LIST_PADDING: Padding = Padding {
 };
 const CARD_SPACING: f32 = 9.0;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SortKey {
+    #[default]
+    Found,
+    Players,
+    Ping,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EditionFilter {
+    #[default]
+    All,
+    Java,
+    Bedrock,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OnlineModeFilter {
+    #[default]
+    Any,
+    Online,
+    Cracked,
+}
+
+#[derive(Default)]
+pub(super) struct Filters {
+    pub(super) query: String,
+    pub(super) sort: SortKey,
+    pub(super) descending: bool,
+    pub(super) edition: EditionFilter,
+    pub(super) online_mode: OnlineModeFilter,
+    pub(super) version: String,
+    pub(super) plugin: String,
+}
+
+impl Filters {
+    pub(super) fn active_count(&self) -> usize {
+        usize::from(self.edition != EditionFilter::All)
+            + usize::from(self.online_mode != OnlineModeFilter::Any)
+            + usize::from(!self.version.trim().is_empty())
+            + usize::from(!self.plugin.trim().is_empty())
+    }
+}
+
 #[derive(Default)]
 pub struct ResultsList {
     items: Vec<ServerInfo>,
-    /// Maps a server address to its slot in `items` for O(1) lookup and dedup.
-    /// Items are only ever appended or updated in place (never removed), so the
-    /// stored indices stay valid until `clear`.
+    // Indices stay valid because items are only appended or updated, never removed.
     index: HashMap<SocketAddr, usize>,
-    /// Hash of the last-seen raw favicon per address. The full base64 data-URI
-    /// (dozens of KB) is decoded into the avatar handles below and then dropped;
-    /// only this hash is retained, so a refresh can tell whether the favicon
-    /// changed without holding the raw string alongside the decoded pixels.
     favicon_hash: HashMap<SocketAddr, u64>,
     avatars_small: HashMap<SocketAddr, image::Handle>,
     avatars_large: HashMap<SocketAddr, image::Handle>,
+    filters: Filters,
+    query_input: String,
+    // Bumped per keystroke; a debounced apply only runs when its generation still matches.
+    search_gen: u64,
+    sort_open: bool,
+    filters_open: bool,
+    view_order: RefCell<Vec<usize>>,
+    view_dirty: Cell<bool>,
 }
 
 #[derive(Debug, Clone)]
 pub enum ResultsListMessage {
     OpenPreview(SocketAddr),
+    SearchInput(String),
+    SearchApply(u64),
+    ToggleSortMenu,
+    ToggleFilterMenu,
+    DismissMenus,
+    SortPicked(SortKey),
+    SortDescending(bool),
+    EditionPicked(EditionFilter),
+    OnlineModePicked(OnlineModeFilter),
+    VersionFilter(String),
+    PluginFilter(String),
+    ResetFilters,
 }
 
 impl ResultsList {
-    /// Stores `info`, returning the raw favicon to decode when it differs from
-    /// what was last seen for this address (so the caller decodes it off-thread
-    /// and the list never retains the base64 string).
     pub fn push(&mut self, mut info: ServerInfo) -> Option<String> {
         let addr = info.addr;
         let favicon = info.favicon.take();
@@ -60,6 +118,7 @@ impl ResultsList {
                 self.items.push(info);
             }
         }
+        self.view_dirty.set(true);
         self.update_favicon(addr, favicon)
     }
     pub fn clear(&mut self) {
@@ -68,9 +127,14 @@ impl ResultsList {
         self.favicon_hash.clear();
         self.avatars_small.clear();
         self.avatars_large.clear();
+        self.view_dirty.set(true);
     }
     pub fn count(&self) -> usize {
         self.items.len()
+    }
+    pub fn visible_count(&self) -> usize {
+        self.ensure_view();
+        self.view_order.borrow().len()
     }
     pub fn items(&self) -> &[ServerInfo] {
         &self.items
@@ -130,11 +194,10 @@ impl ResultsList {
                 s.ping_history.remove(0);
             }
         }
+        self.view_dirty.set(true);
         self.update_favicon(addr, favicon)
     }
 
-    /// Records the favicon's hash and drops avatars that no longer match,
-    /// returning the raw data-URI only when it changed so it is decoded once.
     fn update_favicon(&mut self, addr: SocketAddr, favicon: Option<String>) -> Option<String> {
         let new_hash = favicon.as_deref().map(favicon_hash);
         if self.favicon_hash.get(&addr).copied() == new_hash {
@@ -153,32 +216,119 @@ impl ResultsList {
         favicon
     }
 
+    pub fn set_search_input(&mut self, text: String) -> u64 {
+        self.query_input = text;
+        self.search_gen = self.search_gen.wrapping_add(1);
+        self.search_gen
+    }
+
+    pub fn apply_search(&mut self, generation: u64) {
+        if generation == self.search_gen && self.filters.query != self.query_input {
+            self.filters.query = self.query_input.clone();
+            self.view_dirty.set(true);
+        }
+    }
+
+    pub fn set_sort(&mut self, key: SortKey) {
+        self.filters.sort = key;
+        self.filters.descending = key == SortKey::Players;
+        self.view_dirty.set(true);
+    }
+
+    pub fn set_sort_descending(&mut self, descending: bool) {
+        self.filters.descending = descending;
+        self.view_dirty.set(true);
+    }
+
+    pub fn set_edition(&mut self, edition: EditionFilter) {
+        self.filters.edition = edition;
+        self.view_dirty.set(true);
+    }
+
+    pub fn set_online_mode(&mut self, mode: OnlineModeFilter) {
+        self.filters.online_mode = mode;
+        self.view_dirty.set(true);
+    }
+
+    pub fn set_version_filter(&mut self, text: String) {
+        self.filters.version = text;
+        self.view_dirty.set(true);
+    }
+
+    pub fn set_plugin_filter(&mut self, text: String) {
+        self.filters.plugin = text;
+        self.view_dirty.set(true);
+    }
+
+    pub fn reset_filters(&mut self) {
+        self.filters.edition = EditionFilter::All;
+        self.filters.online_mode = OnlineModeFilter::Any;
+        self.filters.version.clear();
+        self.filters.plugin.clear();
+        self.view_dirty.set(true);
+    }
+
+    pub fn toggle_sort_menu(&mut self) {
+        self.sort_open = !self.sort_open;
+        self.filters_open = false;
+    }
+
+    pub fn toggle_filter_menu(&mut self) {
+        self.filters_open = !self.filters_open;
+        self.sort_open = false;
+    }
+
+    pub fn close_menus(&mut self) {
+        self.sort_open = false;
+        self.filters_open = false;
+    }
+
+    fn ensure_view(&self) {
+        if !self.view_dirty.get() {
+            return;
+        }
+        let f = &self.filters;
+        let q = f.query.trim().to_lowercase();
+        let version_q = f.version.trim().to_lowercase();
+        let plugin_q = f.plugin.trim().to_lowercase();
+        let mut order: Vec<usize> = (0..self.items.len())
+            .filter(|&i| passes_filters(&self.items[i], f, &q, &version_q, &plugin_q))
+            .collect();
+        // Stable sort keeps ties in discovery order.
+        match f.sort {
+            SortKey::Found => {}
+            SortKey::Players => order.sort_by_key(|&i| self.items[i].online),
+            SortKey::Ping => order.sort_by_key(|&i| self.items[i].latency_ms),
+        }
+        if f.descending {
+            order.reverse();
+        }
+        *self.view_order.borrow_mut() = order;
+        self.view_dirty.set(false);
+    }
+
+    pub fn toolbar(&self, tr: &'static Tr) -> Element<'_, ResultsListMessage> {
+        toolbar::render(self, tr)
+    }
+
     pub fn view(&self, tr: &'static Tr) -> Element<'_, ResultsListMessage> {
         if self.items.is_empty() {
-            return container(
-                text(tr.results_empty)
-                    .size(14)
-                    .font(SANS)
-                    .style(|t: &Theme| text::Style {
-                        color: Some(if is_dark(t) {
-                            c("#5C636F")
-                        } else {
-                            c("#A0A7B1")
-                        }),
-                    }),
-            )
-            .center_x(Fill)
-            .center_y(Fill)
-            .into();
+            return empty_state(tr.results_empty);
+        }
+
+        self.ensure_view();
+        let order: Vec<usize> = self.view_order.borrow().clone();
+        if order.is_empty() {
+            return empty_state(tr.no_matches);
         }
 
         VirtualList::new(
-            self.items.len(),
+            order.len(),
             CARD_HEIGHT,
             CARD_SPACING,
             LIST_PADDING,
-            move |i| {
-                let info = &self.items[i];
+            move |row| {
+                let info = &self.items[order[row]];
                 let addr = info.addr;
                 let content = server_card_content(info, self.avatars_small.get(&addr).cloned(), tr);
                 button(content)
@@ -192,6 +342,70 @@ impl ResultsList {
         )
         .into()
     }
+}
+
+fn empty_state(message: &str) -> Element<'_, ResultsListMessage> {
+    container(
+        text(message)
+            .size(14)
+            .font(SANS)
+            .style(|t: &Theme| text::Style {
+                color: Some(if is_dark(t) {
+                    c("#5C636F")
+                } else {
+                    c("#A0A7B1")
+                }),
+            }),
+    )
+    .center_x(Fill)
+    .center_y(Fill)
+    .into()
+}
+
+// The `*_q` args are pre-lowered, pre-trimmed queries (empty = facet disabled).
+fn passes_filters(
+    s: &ServerInfo,
+    f: &Filters,
+    query: &str,
+    version_q: &str,
+    plugin_q: &str,
+) -> bool {
+    edition_matches(f.edition, &s.edition)
+        && online_mode_matches(f.online_mode, s.online_mode)
+        && (query.is_empty() || search_matches(s, query))
+        && (version_q.is_empty()
+            || strip_section_codes(&s.version)
+                .to_lowercase()
+                .contains(version_q))
+        && (plugin_q.is_empty()
+            || s.plugins
+                .iter()
+                .any(|p| strip_section_codes(p).to_lowercase().contains(plugin_q)))
+}
+
+fn edition_matches(filter: EditionFilter, edition: &Edition) -> bool {
+    match filter {
+        EditionFilter::All => true,
+        EditionFilter::Java => *edition == Edition::Java,
+        EditionFilter::Bedrock => *edition == Edition::Bedrock,
+    }
+}
+
+fn online_mode_matches(filter: OnlineModeFilter, mode: Option<bool>) -> bool {
+    match filter {
+        OnlineModeFilter::Any => true,
+        OnlineModeFilter::Online => mode == Some(true),
+        OnlineModeFilter::Cracked => mode == Some(false),
+    }
+}
+
+fn search_matches(s: &ServerInfo, query: &str) -> bool {
+    let addr = format!("{}:{}", s.addr.ip(), s.addr.port());
+    addr.contains(query)
+        || strip_section_codes(&s.motd).to_lowercase().contains(query)
+        || strip_section_codes(&s.version)
+            .to_lowercase()
+            .contains(query)
 }
 
 fn card_btn_style(t: &Theme, status: button::Status) -> button::Style {
@@ -279,7 +493,6 @@ mod tests {
         list.push(ServerInfo::base(addr(25565), Edition::Java));
         list.push(ServerInfo::base(addr(25566), Edition::Java));
 
-        // Re-pushing the same address updates in place instead of appending.
         let mut updated = ServerInfo::base(addr(25565), Edition::Java);
         updated.online = 42;
         list.push(updated);
@@ -297,10 +510,9 @@ mod tests {
 
         let mut info = ServerInfo::base(addr(25565), Edition::Java);
         info.latency_ms = 7;
-        assert!(list.refresh(info).is_none()); // favicon unchanged → nothing to decode
+        assert!(list.refresh(info).is_none());
         assert_eq!(list.get_by_addr(addr(25565)).unwrap().latency_ms, 7);
 
-        // Refreshing an unknown address is a no-op.
         assert!(
             list.refresh(ServerInfo::base(addr(25599), Edition::Java))
                 .is_none()
@@ -314,20 +526,16 @@ mod tests {
         let mut info = ServerInfo::base(addr(25565), Edition::Java);
         info.favicon = Some("data:image/png;base64,AAAA".into());
 
-        // First sighting hands the raw favicon off for decoding...
         assert_eq!(
             list.push(info).as_deref(),
             Some("data:image/png;base64,AAAA")
         );
-        // ...but the stored item does not keep the base64 string.
         assert!(list.get_by_addr(addr(25565)).unwrap().favicon.is_none());
 
-        // Re-pushing the same favicon is a no-op (already decoded).
         let mut same = ServerInfo::base(addr(25565), Edition::Java);
         same.favicon = Some("data:image/png;base64,AAAA".into());
         assert!(list.push(same).is_none());
 
-        // A changed favicon is handed off again.
         let mut changed = ServerInfo::base(addr(25565), Edition::Java);
         changed.favicon = Some("data:image/png;base64,BBBB".into());
         assert_eq!(
@@ -343,5 +551,120 @@ mod tests {
         list.clear();
         assert!(list.get_by_addr(addr(25565)).is_none());
         assert_eq!(list.count(), 0);
+    }
+
+    fn server(port: u16, edition: Edition, online: u32, latency: u64, motd: &str) -> ServerInfo {
+        let mut s = ServerInfo::base(addr(port), edition);
+        s.online = online;
+        s.latency_ms = latency;
+        s.motd = motd.into();
+        s
+    }
+
+    fn visible_ports(list: &ResultsList) -> Vec<u16> {
+        list.ensure_view();
+        list.view_order
+            .borrow()
+            .iter()
+            .map(|&i| list.items[i].addr.port())
+            .collect()
+    }
+
+    fn seeded() -> ResultsList {
+        let mut list = ResultsList::default();
+        list.push(server(1, Edition::Java, 10, 200, "Alpha survival"));
+        list.push(server(2, Edition::Bedrock, 50, 20, "Beta creative"));
+        list.push(server(3, Edition::Java, 5, 90, "Gamma"));
+        list
+    }
+
+    fn search(list: &mut ResultsList, q: &str) {
+        let generation = list.set_search_input(q.into());
+        list.apply_search(generation);
+    }
+
+    #[test]
+    fn default_view_keeps_discovery_order_and_counts_all() {
+        let list = seeded();
+        assert_eq!(visible_ports(&list), vec![1, 2, 3]);
+        assert_eq!(list.visible_count(), 3);
+        assert_eq!(list.count(), 3);
+    }
+
+    #[test]
+    fn search_matches_motd_and_address_case_insensitively() {
+        let mut list = seeded();
+        search(&mut list, "beta");
+        assert_eq!(visible_ports(&list), vec![2]);
+
+        search(&mut list, "127.0.0.1:3");
+        assert_eq!(visible_ports(&list), vec![3]);
+
+        search(&mut list, "  ");
+        assert_eq!(visible_ports(&list), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn stale_debounced_search_is_ignored() {
+        let mut list = seeded();
+        let stale = list.set_search_input("beta".into());
+        let _fresh = list.set_search_input("gamma".into());
+        list.apply_search(stale);
+        assert_eq!(visible_ports(&list), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn online_mode_and_plugin_filters_narrow_results() {
+        let mut list = ResultsList::default();
+        let mut a = server(1, Edition::Java, 1, 10, "A");
+        a.online_mode = Some(true);
+        a.plugins = vec!["EssentialsX".into()];
+        let mut b = server(2, Edition::Java, 1, 10, "B");
+        b.online_mode = Some(false);
+        list.push(a);
+        list.push(b);
+
+        list.set_online_mode(OnlineModeFilter::Cracked);
+        assert_eq!(visible_ports(&list), vec![2]);
+
+        list.set_online_mode(OnlineModeFilter::Any);
+        list.set_plugin_filter("essentials".into());
+        assert_eq!(visible_ports(&list), vec![1]);
+        assert_eq!(list.filters.active_count(), 1);
+    }
+
+    #[test]
+    fn edition_filter_narrows_to_one_edition() {
+        let mut list = seeded();
+        list.set_edition(EditionFilter::Java);
+        assert_eq!(visible_ports(&list), vec![1, 3]);
+        assert_eq!(list.visible_count(), 2);
+        assert_eq!(list.count(), 3);
+    }
+
+    #[test]
+    fn sort_players_defaults_to_high_first_and_direction_flips() {
+        let mut list = seeded();
+        list.set_sort(SortKey::Players);
+        assert_eq!(visible_ports(&list), vec![2, 1, 3]);
+
+        list.set_sort_descending(false);
+        assert_eq!(visible_ports(&list), vec![3, 1, 2]);
+    }
+
+    #[test]
+    fn sort_ping_defaults_to_low_first() {
+        let mut list = seeded();
+        list.set_sort(SortKey::Ping);
+        assert_eq!(visible_ports(&list), vec![2, 3, 1]);
+    }
+
+    #[test]
+    fn search_and_sort_compose() {
+        let mut list = seeded();
+        list.push(server(4, Edition::Java, 99, 10, "Alpha raid"));
+        search(&mut list, "alpha");
+        list.set_sort(SortKey::Players);
+        assert_eq!(visible_ports(&list), vec![4, 1]);
     }
 }

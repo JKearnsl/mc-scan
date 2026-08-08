@@ -7,9 +7,6 @@ use iced::{Background, Border, Color, ContentFit, Element, Theme, gradient};
 use crate::styles::{MONO_SEMIBOLD, SANS_SEMIBOLD, c, is_dark};
 use scanner::types::Edition;
 
-/// Dimensions for a `build_avatar` instance.
-/// - `SMALL` is used in the results list,
-/// - `LARGE` in the server preview dialog.
 #[derive(Clone, Copy)]
 pub struct AvatarSize {
     pub outer: f32,
@@ -284,7 +281,7 @@ fn light_variant(dark_letter: Color) -> (Color, Color, Color) {
     (bg_start, bg_end, letter)
 }
 
-/// sRGB -> HSL, with hue in turns (0..1).
+// Hue in turns (0..1).
 fn rgb_to_hsl(c: Color) -> (f32, f32, f32) {
     let (r, g, b) = (c.r, c.g, c.b);
     let max = r.max(g).max(b);
@@ -305,7 +302,6 @@ fn rgb_to_hsl(c: Color) -> (f32, f32, f32) {
     (h / 6.0, s, l)
 }
 
-/// HSL (hue in turns) -> sRGB.
 fn hsl_to_color(h: f32, s: f32, l: f32) -> Color {
     let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
     let hp = (h * 6.0).rem_euclid(6.0);

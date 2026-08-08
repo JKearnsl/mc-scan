@@ -191,7 +191,6 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         .into(),
     );
 
-    // Дополнительные ячейки, зависящие от эдишена/данных.
     let mut extra_cells: Vec<Element<'_, Message>> = Vec::new();
     if let Some(w) = &server.world {
         extra_cells.push(stat_cell(tr.world, strip_section_codes(w), false));
@@ -610,15 +609,11 @@ fn stat_label(label: &str) -> Element<'_, Message> {
         .into()
 }
 
-/// True when the version string is too long / list-like to fit in the fixed grid
-/// cell, so it should be shown as a short summary and made expandable.
 fn is_version_expandable(v: &str) -> bool {
     let v = v.trim();
     !v.is_empty() && (v.contains(',') || v.chars().count() > 14)
 }
 
-/// A guaranteed-short label for the grid cell: `first +N` for a comma list, or the
-/// value truncated with an ellipsis otherwise. Kept short so it never widens the row.
 fn version_summary(v: &str) -> String {
     let tokens: Vec<&str> = v
         .split(',')
@@ -637,9 +632,6 @@ fn version_summary(v: &str) -> String {
     }
 }
 
-/// The version cell rendered as a button that expands the cell itself in place:
-/// collapsed it shows a short summary, expanded it grows to list every version as
-/// chips inside the same block. The chevron (top-right) signals the toggle.
 fn expandable_version_cell<'a>(
     label: &'a str,
     value: &str,

@@ -1,11 +1,5 @@
-//! Detect online-mode / offline-mode (cracked) based on the server's response to Login Start.
-//!
-//! Send a handshake (next state = 2) and Login Start, read the FIRST packet
-//! of the login phase and immediately terminate the connection—before any authentication:
-//! - `0x01` Encryption Request => online-mode (Mojang authorization required)
-//! - `0x02` Login Success / `0x03` Set Compression => offline-mode (cracked)
-//! - `0x00` Disconnect / other => unknown (whitelist / ban / version)
-//!
+//! Detect online/offline mode from the first login-phase packet after a
+//! handshake + Login Start, before any authentication.
 
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -129,10 +123,10 @@ mod tests {
 
     #[test]
     fn classify_maps_packet_ids() {
-        assert_eq!(classify_login_packet(0x01), Some(true)); // Encryption Request
-        assert_eq!(classify_login_packet(0x02), Some(false)); // Login Success
-        assert_eq!(classify_login_packet(0x03), Some(false)); // Set Compression
-        assert_eq!(classify_login_packet(0x00), None); // Disconnect
+        assert_eq!(classify_login_packet(0x01), Some(true));
+        assert_eq!(classify_login_packet(0x02), Some(false));
+        assert_eq!(classify_login_packet(0x03), Some(false));
+        assert_eq!(classify_login_packet(0x00), None);
     }
 
     #[tokio::test]
@@ -160,15 +154,11 @@ mod tests {
 
     #[test]
     fn login_start_shapes_per_version() {
-        // 1.20.2
+        // 1.20.2+ payload = id(1) + strlen(1) + "Scanner"(7) + uuid(16) = 25
         let p764 = build_login_start("Scanner", 764);
-        // frame: len varint + [id + strlen + "Scanner"(7) + uuid(16)]
-        // payload = 1 + 1 + 7 + 16 = 25
         assert_eq!(p764[0], 25);
-        // 1.19.3
         let p761 = build_login_start("Scanner", 761);
         assert_eq!(p761[0], 26);
-        // < 1.19
         let p47 = build_login_start("Scanner", 47);
         assert_eq!(p47[0], 9);
     }
