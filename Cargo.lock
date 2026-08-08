@@ -1403,7 +1403,7 @@ dependencies = [
 
 [[package]]
 name = "gui"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "base64",
  "directories",
@@ -3478,7 +3478,7 @@ dependencies = [
 
 [[package]]
 name = "scanner"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "futures",
  "ipnet",

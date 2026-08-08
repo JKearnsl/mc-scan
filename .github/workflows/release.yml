@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x86_64
+          - os: windows-latest
+            name: windows-x86_64
+          - os: macos-latest
+            name: macos-aarch64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev
+
+      - name: Install cargo-bundle
+        if: runner.os != 'Windows'
+        run: cargo install cargo-bundle --locked
+
+      - name: Build release binary
+        run: cargo build --release --bin mc-scan
+
+      - name: Package Linux (.deb + tarball)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          (cd crates/gui && cargo bundle --release --format deb)
+          cp target/release/bundle/deb/*.deb "dist/mc-scan-${version}-linux-x86_64.deb"
+          staging="mc-scan-${version}-linux-x86_64"
+          mkdir -p "$staging"
+          cp target/release/mc-scan "$staging/"
+          cp -r packaging/linux "$staging/packaging"
+          cp README.md "$staging/"
+          tar -czf "dist/${staging}.tar.gz" "$staging"
+
+      - name: Package macOS (.dmg)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          (cd crates/gui && cargo bundle --release)
+          hdiutil create -volname "mc-scan" \
+            -srcfolder "target/release/bundle/osx/mc-scan.app" \
+            -ov -format UDZO "dist/mc-scan-${version}-macos-aarch64.dmg"
+
+      - name: Package Windows (.zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path target/release/mc-scan.exe `
+            -DestinationPath "dist/mc-scan-$version-windows-x86_64.zip"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
