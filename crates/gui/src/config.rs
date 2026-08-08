@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
 use crate::APP_NAME;
 use crate::i18n::Language;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -36,8 +36,7 @@ impl Default for Config {
 
 impl Config {
     fn config_path() -> Option<PathBuf> {
-        directories::ProjectDirs::from("", "", APP_NAME)
-            .map(|d| d.config_dir().join("config.json"))
+        directories::ProjectDirs::from("", "", APP_NAME).map(|d| d.config_dir().join("config.json"))
     }
 
     pub fn load() -> Option<Config> {
@@ -46,7 +45,9 @@ impl Config {
     }
 
     pub fn save(&self) {
-        let Some(path) = Self::config_path() else { return };
+        let Some(path) = Self::config_path() else {
+            return;
+        };
         if let Some(dir) = path.parent() {
             let _ = std::fs::create_dir_all(dir);
         }

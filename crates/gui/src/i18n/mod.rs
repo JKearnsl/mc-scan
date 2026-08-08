@@ -1,7 +1,7 @@
-mod ru;
 mod en;
-mod zh;
 mod ja;
+mod ru;
+mod zh;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Language {

@@ -6,7 +6,9 @@ use crate::components::ui::{caption, icons, popover, search_input};
 use crate::i18n::Tr;
 use crate::styles::{SANS, SANS_SEMIBOLD, c, is_dark};
 
-use super::{EditionFilter, OnlineModeFilter, ResultsList, ResultsListMessage, SortKey, WhitelistFilter};
+use super::{
+    EditionFilter, OnlineModeFilter, ResultsList, ResultsListMessage, SortKey, WhitelistFilter,
+};
 
 type Msg = ResultsListMessage;
 

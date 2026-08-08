@@ -229,7 +229,8 @@ mod tests {
 
     #[test]
     fn whitelist_disconnect_marks_offline_and_whitelisted() {
-        let vanilla = disconnect_payload("{\"translate\":\"multiplayer.disconnect.not_whitelisted\"}");
+        let vanilla =
+            disconnect_payload("{\"translate\":\"multiplayer.disconnect.not_whitelisted\"}");
         let plugin = disconnect_payload("{\"text\":\"You are not white-listed on this server!\"}");
         let russian = disconnect_payload("{\"text\":\"Вас нет в белом списке\"}");
         let expected = LoginOutcome {
@@ -261,7 +262,10 @@ mod tests {
         let _ = server.await;
 
         assert_eq!(len, Some(1));
-        assert_eq!(classify_login_packet(id.unwrap(), &[]).online_mode, Some(true));
+        assert_eq!(
+            classify_login_packet(id.unwrap(), &[]).online_mode,
+            Some(true)
+        );
     }
 
     #[test]

@@ -29,18 +29,17 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
     let mut col = column![header].width(Fill).height(Fill);
     if app.results.count() > 0 {
-        let toolbar =
-            container(
-                app.results
-                    .toolbar(app.tr(), app.settings.online_mode_check)
-                    .map(Message::ResultsList),
-            )
-            .padding(Padding {
-                top: 0.0,
-                right: 20.0,
-                bottom: 14.0,
-                left: 20.0,
-            });
+        let toolbar = container(
+            app.results
+                .toolbar(app.tr(), app.settings.online_mode_check)
+                .map(Message::ResultsList),
+        )
+        .padding(Padding {
+            top: 0.0,
+            right: 20.0,
+            bottom: 14.0,
+            left: 20.0,
+        });
         col = col.push(toolbar);
     }
     col.push(results).into()

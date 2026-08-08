@@ -131,7 +131,6 @@ impl McScan {
     pub fn init() -> (Self, Task<Message>) {
         let cfg = crate::config::Config::load().unwrap_or_default();
 
-
         let language = cfg.language.resolve();
         let mut address_list = AddressList::default();
         address_list.push_ranges(parse_ip_ranges(&cfg.ranges.join("\n")));
@@ -541,9 +540,15 @@ impl McScan {
         let online_mode_check = self.settings.online_mode_check;
         let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
         RUNTIME.spawn(async move {
-            let result =
-                scanner::probe_server(addr, edition, timeout, query_enabled, online_mode_check, None)
-                    .await;
+            let result = scanner::probe_server(
+                addr,
+                edition,
+                timeout,
+                query_enabled,
+                online_mode_check,
+                None,
+            )
+            .await;
             let _ = tx.send(result);
         });
         Task::perform(
