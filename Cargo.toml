@@ -6,9 +6,7 @@ members = ["crates/scanner", "crates/gui"]
 version = "0.1.0"
 edition = "2024"
 
-# Versions shared by more than one crate live here; members opt in with
-# `dep.workspace = true` and add their own features. A future CLI crate reuses
-# the same pins for free.
+
 [workspace.dependencies]
 tokio = "1"
 futures = "0.3"

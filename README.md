@@ -12,8 +12,7 @@ Minecraft server scanner — Java & Bedrock
 
 <br/>
 
-<!-- TODO: main window screenshot -->
-<img src="assets/screenshot-main.png" width="780" alt="mc-scan main window"/>
+<img src="docs/hero-themes.png" width="700" style="box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);" alt="mc-scan main window — light and dark themes"/>
 
 </div>
 
@@ -41,7 +40,7 @@ Ports, concurrency, and timeout are configurable in Settings.
 
 <div align="center">
 
-<!-- TODO: server detail dialog screenshot -->
-<img src="assets/screenshot-preview.png" width="520" alt="Server detail"/>
+<img src="docs/hero-preview.png" width="700" style="box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);" alt="Server detail"/>
 
 </div>
+
