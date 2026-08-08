@@ -5,7 +5,6 @@ edition.workspace = true
 description = "iced GUI front-end for mc-scan"
 build = "build.rs"
 
-# The crate is `gui`, but the product (and its binary) is `mc-scan`.
 [[bin]]
 name = "mc-scan"
 path = "src/main.rs"
@@ -41,17 +40,14 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 # graph, which panics iced's zbus-based OS-theme detection (it runs outside a
 # tokio context). async-std keeps zbus on its default async-io reactor.
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
-# Already in the tree via iced; used directly to follow the OS color scheme.
 mundy = { version = "0.2.3", default-features = false, features = ["color-scheme", "async-io"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
-# Embeds the app icon (and a default manifest) into the Windows .exe.
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"
 
-# Metadata for `cargo bundle` (.app on macOS, .deb/AppImage on Linux).
 [package.metadata.bundle]
 name = "mc-scan"
 identifier = "com.jkearnsl.mc-scan"

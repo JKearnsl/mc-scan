@@ -1,5 +1,4 @@
-// Embeds the app icon and a default manifest into the Windows executable so the
-// packaged .exe shows the icon in Explorer/taskbar. No-op on other platforms.
+
 fn main() {
     #[cfg(windows)]
     {
