@@ -127,7 +127,8 @@ pub struct McScan {
 
 impl McScan {
     pub fn init() -> (Self, Task<Message>) {
-        let cfg = crate::config::load().unwrap_or_default();
+        let cfg = crate::config::Config::load().unwrap_or_default();
+
 
         let language = cfg.language.resolve();
         let mut address_list = AddressList::default();
@@ -172,7 +173,7 @@ impl McScan {
     }
 
     fn persist(&self) {
-        crate::config::save(&crate::config::Config {
+        crate::config::Config {
             ranges: self
                 .address_list
                 .values()
@@ -187,7 +188,8 @@ impl McScan {
             online_mode_check: self.settings.online_mode_check,
             theme: self.theme_pref,
             language: self.language.into(),
-        });
+        }
+        .save();
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
