@@ -2,6 +2,8 @@
 name = "gui"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "iced GUI front-end for mc-scan"
 build = "build.rs"
 

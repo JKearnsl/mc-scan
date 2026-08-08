@@ -1,0 +1,18 @@
+mc-scan
+Copyright 2026 JKearnsl
+
+This product is licensed under the Apache License, Version 2.0 (the
+"License"); you may not use this product except in compliance with the
+License. A copy of the License is provided in the LICENSE file and at
+http://www.apache.org/licenses/LICENSE-2.0
+
+Trademarks and branding
+-----------------------
+
+The name "mc-scan", the mc-scan logo and the application icons under
+crates/gui/assets/ and packaging/linux/icons/ are NOT licensed under the
+Apache License. They are reserved by the author. You may build, use and
+redistribute this software (including modified forks), but you may not use
+the "mc-scan" name or its logo to name, brand or promote a derivative work,
+or in any way that suggests it is endorsed by or affiliated with the
+original project. Rebrand your fork with your own name and icon.

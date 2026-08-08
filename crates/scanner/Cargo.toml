@@ -2,6 +2,8 @@
 name = "scanner"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "GUI-free Minecraft server scanning core for mc-scan"
 
 [dependencies]
