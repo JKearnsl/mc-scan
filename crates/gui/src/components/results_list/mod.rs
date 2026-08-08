@@ -15,8 +15,8 @@ use crate::styles::{SANS, c, is_dark};
 use crate::text::strip_section_codes;
 use scanner::types::{Edition, ServerInfo};
 
-use avatar::{AvatarSize, favicon_handle};
 use crate::components::ui::VirtualList;
+use avatar::{AvatarSize, favicon_handle};
 use item::{CARD_HEIGHT, server_card_content};
 
 const LIST_PADDING: Padding = Padding {

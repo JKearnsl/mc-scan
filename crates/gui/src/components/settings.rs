@@ -3,7 +3,7 @@ use iced::widget::space::Space;
 use iced::widget::{column, row};
 
 use crate::app::{McScan, Message};
-use crate::components::ui::{BtnVariant, btn, checkbox, dialog, labeled_input, section_label};
+use crate::components::ui::{BtnVariant, btn, caption, checkbox, dialog, labeled_input};
 use crate::config::ThemePref;
 use crate::i18n::Language;
 
@@ -23,7 +23,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
     let body = column![
         Space::new().height(16),
-        section_label(tr.theme),
+        caption(tr.theme, 11),
         Space::new().height(8),
         row![
             theme_btn(tr.system, ThemePref::System),
@@ -33,7 +33,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             theme_btn(tr.light, ThemePref::Light),
         ],
         Space::new().height(16),
-        section_label(tr.language),
+        caption(tr.language, 11),
         Space::new().height(8),
         row![
             btn(
@@ -73,7 +73,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             ),
         ],
         Space::new().height(16),
-        section_label(tr.ports),
+        caption(tr.ports, 11),
         Space::new().height(8),
         labeled_input(
             "Java",
@@ -91,7 +91,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             app.settings.bedrock_ports_error
         ),
         Space::new().height(16),
-        section_label(tr.parameters),
+        caption(tr.parameters, 11),
         Space::new().height(8),
         labeled_input(
             tr.threads,
@@ -109,7 +109,7 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             false
         ),
         Space::new().height(16),
-        section_label(tr.enrichment),
+        caption(tr.enrichment, 11),
         Space::new().height(8),
         checkbox(
             tr.query_label,

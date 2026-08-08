@@ -2,7 +2,7 @@ use iced::Length::{Fill, Fixed};
 use iced::widget::{Space, button, column, container, row, svg, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Padding, Shadow, Theme, Vector};
 
-use crate::components::ui::{icons, popover, search_input, section_label};
+use crate::components::ui::{caption, icons, popover, search_input};
 use crate::i18n::Tr;
 use crate::styles::{SANS, SANS_SEMIBOLD, c, is_dark};
 
@@ -104,7 +104,7 @@ fn sort_menu<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> {
     .spacing(2);
 
     let direction = column![
-        section_label(tr.direction),
+        caption(tr.direction, 11),
         segmented(
             vec![(tr.dir_asc, false), (tr.dir_desc, true)],
             list.filters.descending,
@@ -113,7 +113,7 @@ fn sort_menu<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> {
     ]
     .spacing(7);
 
-    let header = container(section_label(tr.sort_by)).padding(Padding {
+    let header = container(caption(tr.sort_by, 11)).padding(Padding {
         top: 4.0,
         right: 10.0,
         bottom: 4.0,
@@ -280,7 +280,7 @@ fn filter_panel<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> 
 }
 
 fn field<'a>(label: &'a str, control: Element<'a, Msg>) -> Element<'a, Msg> {
-    column![section_label(label), control].spacing(7).into()
+    column![caption(label, 11), control].spacing(7).into()
 }
 
 fn count_badge<'a>(count: usize) -> Element<'a, Msg> {

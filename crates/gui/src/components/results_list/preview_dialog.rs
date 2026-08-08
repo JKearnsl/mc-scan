@@ -1,4 +1,7 @@
-use crate::components::ui::{BtnVariant, btn, scrollbar as styled_scroll, wrap};
+use crate::components::ui::{
+    BtnVariant, body, btn, caption, cell, cell_colored, chip, chip_dot, field, heading,
+    scrollbar as styled_scroll, wrap,
+};
 use crate::text::strip_section_codes;
 use iced::Length::Fixed;
 use iced::mouse::Interaction;
@@ -11,7 +14,7 @@ use iced::{
 
 use super::avatar::{AvatarSize, build_avatar_icon};
 use crate::app::{McScan, Message, ModalKind};
-use crate::styles::{MONO, MONO_SEMIBOLD, SANS, SANS_SEMIBOLD, c, is_dark};
+use crate::styles::{MONO, MONO_SEMIBOLD, SANS_SEMIBOLD, c, is_dark};
 use scanner::types::Edition;
 
 pub fn render(app: &McScan) -> Element<'_, Message> {
@@ -87,23 +90,9 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         row![
             avatar,
             Space::new().width(16),
-            column![
-                text(server_name)
-                    .size(17)
-                    .font(SANS_SEMIBOLD)
-                    .style(|t: &Theme| text::Style {
-                        color: Some(if is_dark(t) {
-                            c("#E8EBF0")
-                        } else {
-                            c("#161A20")
-                        }),
-                    })
-                    .wrapping(text::Wrapping::None),
-                Space::new().height(6),
-                online_row,
-            ]
-            .width(Fill)
-            .clip(true),
+            column![heading(server_name), Space::new().height(6), online_row,]
+                .width(Fill)
+                .clip(true),
             close_btn,
         ]
         .align_y(Alignment::Start),
@@ -164,27 +153,16 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
     ]
     .align_y(Alignment::Center);
 
-    let addr_section = labeled_section(tr.address, addr_row.into());
+    let addr_section = field(tr.address, addr_row.into());
 
     let motd_text = strip_section_codes(server.motd.trim());
-    let motd_section = labeled_section(
+    let motd_section = field(
         tr.motd,
-        container(
-            text(if motd_text.is_empty() {
-                "—".to_string()
-            } else {
-                motd_text
-            })
-            .size(13)
-            .font(SANS)
-            .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) {
-                    c("#A2ABBA")
-                } else {
-                    c("#4A5260")
-                }),
-            }),
-        )
+        container(body(if motd_text.is_empty() {
+            "—".to_string()
+        } else {
+            motd_text
+        }))
         .style(inset_box_style)
         .padding(Padding::from([11, 13]))
         .width(Fill)
@@ -193,53 +171,53 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
     let mut extra_cells: Vec<Element<'_, Message>> = Vec::new();
     if let Some(w) = &server.world {
-        extra_cells.push(stat_cell(tr.world, strip_section_codes(w), false));
+        extra_cells.push(cell(tr.world, strip_section_codes(w), false));
     }
     if let Some(gm) = &server.gamemode {
-        extra_cells.push(stat_cell(tr.gamemode, strip_section_codes(gm), false));
+        extra_cells.push(cell(tr.gamemode, strip_section_codes(gm), false));
     }
     if let Some(sc) = server.secure_chat {
         let v = if sc { tr.enabled } else { tr.disabled };
-        extra_cells.push(stat_cell(tr.secure_chat, v.to_string(), false));
+        extra_cells.push(cell(tr.secure_chat, v.to_string(), false));
     }
     if let Some(om) = server.online_mode {
         let v = if om { tr.online_yes } else { tr.online_no };
-        extra_cells.push(stat_cell(tr.online_mode, v.to_string(), false));
+        extra_cells.push(cell(tr.online_mode, v.to_string(), false));
     }
     if !server.mods.is_empty() {
-        extra_cells.push(stat_cell(tr.mods, server.mods.len().to_string(), true));
+        extra_cells.push(cell(tr.mods, server.mods.len().to_string(), true));
     }
 
     let version_expandable = is_version_expandable(&mc_version);
     let version_cell = if version_expandable {
         expandable_version_cell(tr.version, &mc_version, app.version_expanded)
     } else {
-        stat_cell(tr.version, mc_version.clone(), true)
+        cell(tr.version, mc_version.clone(), true)
     };
 
     let mut stats_col = column![
         row![
-            stat_cell(
+            cell(
                 tr.players,
                 format!("{} / {}", server.online, server.max_players),
                 false
             ),
             Space::new().width(9),
-            stat_cell_colored(
+            cell_colored(
                 tr.ping,
                 format!("{} ms", server.latency_ms),
                 ping_color(server.latency_ms)
             ),
             Space::new().width(9),
-            stat_cell(tr.edition, edition_str.to_string(), false),
+            cell(tr.edition, edition_str.to_string(), false),
         ],
         Space::new().height(9),
         row![
             version_cell,
             Space::new().width(9),
-            stat_cell(tr.protocol, server.protocol.to_string(), true),
+            cell(tr.protocol, server.protocol.to_string(), true),
             Space::new().width(9),
-            stat_cell(
+            cell(
                 tr.software,
                 software.unwrap_or_else(|| "—".to_string()),
                 false
@@ -250,18 +228,18 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
 
     if !extra_cells.is_empty() {
         let mut extra_row = row![].width(Fill);
-        for (i, cell) in extra_cells.into_iter().enumerate() {
+        for (i, el) in extra_cells.into_iter().enumerate() {
             if i > 0 {
                 extra_row = extra_row.push(Space::new().width(9));
             }
-            extra_row = extra_row.push(cell);
+            extra_row = extra_row.push(el);
         }
         stats_col = stats_col.push(Space::new().height(9)).push(extra_row);
     }
 
     let stats_block = container(stats_col).padding(Padding::from([10, 22]));
 
-    let chart_block = labeled_section(
+    let chart_block = field(
         tr.latency,
         ping_chart(server.latency_ms, &server.ping_history),
     );
@@ -271,12 +249,13 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
             .samples
             .iter()
             .take(20)
-            .map(|s| player_chip(strip_section_codes(s)))
+            .map(|s| {
+                let name = strip_section_codes(s);
+                let color = player_dot_color(&name);
+                chip_dot(name, color)
+            })
             .collect();
-        Some(labeled_section(
-            tr.players_online,
-            wrap(chips).spacing(7.0).into(),
-        ))
+        Some(field(tr.players_online, wrap(chips).spacing(7.0).into()))
     } else {
         None
     };
@@ -291,14 +270,11 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
                 } else {
                     format!("{} {}", m.id, m.version)
                 };
-                crate::components::ui::chip(strip_section_codes(&label))
+                chip(strip_section_codes(&label))
             })
             .collect();
         let title = format!("{} · {}", tr.mods, server.mods.len());
-        Some(labeled_section_owned(
-            title,
-            wrap(chips).spacing(7.0).into(),
-        ))
+        Some(field(title, wrap(chips).spacing(7.0).into()))
     } else {
         None
     };
@@ -307,34 +283,31 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         let chips: Vec<Element<'_, Message>> = server
             .plugins
             .iter()
-            .map(|p| crate::components::ui::chip(strip_section_codes(p)))
+            .map(|p| chip(strip_section_codes(p)))
             .collect();
         let title = format!("{} · {}", tr.plugins, server.plugins.len());
-        Some(labeled_section_owned(
-            title,
-            wrap(chips).spacing(7.0).into(),
-        ))
+        Some(field(title, wrap(chips).spacing(7.0).into()))
     } else {
         None
     };
 
-    let mut body = column![header, separator, addr_section, motd_section, stats_block,].width(Fill);
+    let mut col = column![header, separator, addr_section, motd_section, stats_block,].width(Fill);
 
-    body = body.push(chart_block);
+    col = col.push(chart_block);
 
     if let Some(s) = mods_block {
-        body = body.push(s);
+        col = col.push(s);
     }
 
     if let Some(s) = plugins_block {
-        body = body.push(s);
+        col = col.push(s);
     }
 
     if let Some(s) = samples_block {
-        body = body.push(s);
+        col = col.push(s);
     }
 
-    let dialog = container(styled_scroll(body))
+    let dialog = container(styled_scroll(col))
         .width(Fixed(516.0))
         .height(Fixed(535.0))
         .padding(Padding {
@@ -417,198 +390,6 @@ fn ping_chart<'a>(current_ping: u64, history: &[u64]) -> Element<'a, Message> {
         .into()
 }
 
-fn player_chip(name: String) -> Element<'static, Message> {
-    let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('A') as u32;
-    let idx = ((first.wrapping_mul(2654435769)) >> 28) as usize;
-    const DOT_COLORS: &[Color] = &[
-        Color {
-            r: 0.239,
-            g: 0.839,
-            b: 0.549,
-            a: 1.0,
-        },
-        Color {
-            r: 0.561,
-            g: 0.702,
-            b: 1.000,
-            a: 1.0,
-        },
-        Color {
-            r: 0.878,
-            g: 0.698,
-            b: 0.478,
-            a: 1.0,
-        },
-        Color {
-            r: 0.753,
-            g: 0.478,
-            b: 0.878,
-            a: 1.0,
-        },
-        Color {
-            r: 0.878,
-            g: 0.478,
-            b: 0.478,
-            a: 1.0,
-        },
-        Color {
-            r: 0.478,
-            g: 0.831,
-            b: 0.878,
-            a: 1.0,
-        },
-        Color {
-            r: 0.639,
-            g: 0.851,
-            b: 0.478,
-            a: 1.0,
-        },
-        Color {
-            r: 0.878,
-            g: 0.753,
-            b: 0.478,
-            a: 1.0,
-        },
-    ];
-    let dot_color = DOT_COLORS[idx % DOT_COLORS.len()];
-
-    container(
-        row![
-            container(Space::new())
-                .width(Fixed(7.0))
-                .height(Fixed(7.0))
-                .style(move |_: &Theme| ContainerStyle {
-                    background: Some(Background::Color(dot_color)),
-                    border: Border {
-                        radius: 3.0.into(),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            text(name)
-                .size(13)
-                .font(SANS)
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#A2ABBA")
-                    } else {
-                        c("#3A4049")
-                    }),
-                }),
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center),
-    )
-    .style(|t: &Theme| ContainerStyle {
-        background: Some(Background::Color(if is_dark(t) {
-            c("#191E27")
-        } else {
-            c("#EEF0F3")
-        })),
-        border: Border {
-            color: if is_dark(t) {
-                c("#262E3C")
-            } else {
-                c("#DDE2E8")
-            },
-            width: 1.0,
-            radius: 8.0.into(),
-        },
-        ..Default::default()
-    })
-    .padding(Padding {
-        top: 6.0,
-        right: 10.0,
-        bottom: 6.0,
-        left: 8.0,
-    })
-    .into()
-}
-
-fn labeled_section_owned<'a>(label: String, content: Element<'a, Message>) -> Element<'a, Message> {
-    container(
-        column![
-            text(label)
-                .size(10)
-                .font(SANS_SEMIBOLD)
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#5C636F")
-                    } else {
-                        c("#A0A7B1")
-                    }),
-                }),
-            Space::new().height(8),
-            content,
-        ]
-        .width(Fill),
-    )
-    .padding(Padding::from([10, 22]))
-    .into()
-}
-
-fn labeled_section<'a>(label: &'a str, content: Element<'a, Message>) -> Element<'a, Message> {
-    container(
-        column![
-            text(label)
-                .size(10)
-                .font(SANS_SEMIBOLD)
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#5C636F")
-                    } else {
-                        c("#A0A7B1")
-                    }),
-                }),
-            Space::new().height(8),
-            content,
-        ]
-        .width(Fill),
-    )
-    .padding(Padding::from([10, 22]))
-    .into()
-}
-
-fn stat_cell<'a>(label: &'a str, value: String, mono: bool) -> Element<'a, Message> {
-    container(
-        column![
-            stat_label(label),
-            Space::new().height(5),
-            text(value)
-                .size(14)
-                .wrapping(text::Wrapping::None)
-                .font(if mono { MONO_SEMIBOLD } else { SANS_SEMIBOLD })
-                .style(|t: &Theme| text::Style {
-                    color: Some(if is_dark(t) {
-                        c("#E8EBF0")
-                    } else {
-                        c("#161A20")
-                    }),
-                }),
-        ]
-        .width(Fill)
-        .clip(true),
-    )
-    .style(stat_card_style)
-    .padding(Padding::from([10, 12]))
-    .width(Fill)
-    .into()
-}
-
-fn stat_label(label: &str) -> Element<'_, Message> {
-    text(label)
-        .size(10)
-        .font(SANS_SEMIBOLD)
-        .style(|t: &Theme| text::Style {
-            color: Some(if is_dark(t) {
-                c("#5C636F")
-            } else {
-                c("#A0A7B1")
-            }),
-        })
-        .into()
-}
-
 fn is_version_expandable(v: &str) -> bool {
     let v = v.trim();
     !v.is_empty() && (v.contains(',') || v.chars().count() > 14)
@@ -644,7 +425,7 @@ fn expandable_version_cell<'a>(
     };
 
     let header = row![
-        container(stat_label(label)).width(Fill),
+        container(caption(label, 10)).width(Fill),
         Space::new().width(6),
         svg(chevron)
             .content_fit(ContentFit::Contain)
@@ -665,7 +446,7 @@ fn expandable_version_cell<'a>(
             .split(',')
             .map(str::trim)
             .filter(|s| !s.is_empty())
-            .map(|s| crate::components::ui::chip(s.to_string()))
+            .map(|s| chip(s.to_string()))
             .collect();
         wrap(chips).spacing(6.0).into()
     } else {
@@ -717,32 +498,6 @@ fn version_cell_style(t: &Theme, status: button::Status) -> button::Style {
     }
 }
 
-fn stat_cell_colored<'a>(
-    label: &'a str,
-    value: String,
-    value_color: Color,
-) -> Element<'a, Message> {
-    container(
-        column![
-            stat_label(label),
-            Space::new().height(5),
-            text(value)
-                .size(14)
-                .wrapping(text::Wrapping::None)
-                .font(MONO_SEMIBOLD)
-                .style(move |_: &Theme| text::Style {
-                    color: Some(value_color)
-                }),
-        ]
-        .width(Fill)
-        .clip(true),
-    )
-    .style(stat_card_style)
-    .padding(Padding::from([10, 12]))
-    .width(Fill)
-    .into()
-}
-
 fn motd_first_line(motd: &str) -> String {
     strip_section_codes(motd.trim())
         .split('\n')
@@ -750,6 +505,63 @@ fn motd_first_line(motd: &str) -> String {
         .unwrap_or("")
         .trim()
         .to_string()
+}
+
+// Deterministic accent for a player nick so a given name keeps its dot color.
+fn player_dot_color(name: &str) -> Color {
+    const DOT_COLORS: &[Color] = &[
+        Color {
+            r: 0.239,
+            g: 0.839,
+            b: 0.549,
+            a: 1.0,
+        },
+        Color {
+            r: 0.561,
+            g: 0.702,
+            b: 1.000,
+            a: 1.0,
+        },
+        Color {
+            r: 0.878,
+            g: 0.698,
+            b: 0.478,
+            a: 1.0,
+        },
+        Color {
+            r: 0.753,
+            g: 0.478,
+            b: 0.878,
+            a: 1.0,
+        },
+        Color {
+            r: 0.878,
+            g: 0.478,
+            b: 0.478,
+            a: 1.0,
+        },
+        Color {
+            r: 0.478,
+            g: 0.831,
+            b: 0.878,
+            a: 1.0,
+        },
+        Color {
+            r: 0.639,
+            g: 0.851,
+            b: 0.478,
+            a: 1.0,
+        },
+        Color {
+            r: 0.878,
+            g: 0.753,
+            b: 0.478,
+            a: 1.0,
+        },
+    ];
+    let first = name.chars().find(|c| c.is_alphanumeric()).unwrap_or('A') as u32;
+    let idx = ((first.wrapping_mul(2654435769)) >> 28) as usize;
+    DOT_COLORS[idx % DOT_COLORS.len()]
 }
 
 fn ping_color(ms: u64) -> Color {
@@ -802,22 +614,6 @@ fn inset_box_style(t: &Theme) -> ContainerStyle {
     ContainerStyle {
         background: Some(Background::Color(if is_dark(t) {
             c("#0E1115")
-        } else {
-            c("#F6F8FA")
-        })),
-        border: Border {
-            color: sep_color(t),
-            width: 1.0,
-            radius: 9.0.into(),
-        },
-        ..Default::default()
-    }
-}
-
-fn stat_card_style(t: &Theme) -> ContainerStyle {
-    ContainerStyle {
-        background: Some(Background::Color(if is_dark(t) {
-            c("#131821")
         } else {
             c("#F6F8FA")
         })),

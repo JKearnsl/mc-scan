@@ -1,5 +1,5 @@
 use iced::Length::Fixed;
-use iced::widget::{progress_bar as iced_progress_bar};
+use iced::widget::progress_bar as iced_progress_bar;
 use iced::{Border, Color, Element, Fill, Theme};
 
 use crate::styles::{c, is_dark};

@@ -3,15 +3,17 @@ use iced::{Element, Theme};
 
 use crate::styles::{SANS_SEMIBOLD, c, is_dark};
 
-pub fn section_label<'a, M: Clone + 'a>(label: &'a str) -> Element<'a, M> {
+/// Primary title, single line.
+pub fn heading<'a, M: 'a>(label: impl text::IntoFragment<'a>) -> Element<'a, M> {
     text(label)
-        .size(11)
+        .size(17)
         .font(SANS_SEMIBOLD)
+        .wrapping(text::Wrapping::None)
         .style(|t: &Theme| text::Style {
             color: Some(if is_dark(t) {
-                c("#5C636F")
+                c("#E8EBF0")
             } else {
-                c("#A0A7B1")
+                c("#161A20")
             }),
         })
         .into()

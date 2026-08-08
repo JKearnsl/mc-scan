@@ -57,37 +57,3 @@ pub fn status<'a, M: Clone + 'a>(label: String) -> Element<'a, M> {
         })
         .into()
 }
-
-pub fn chip<'a, M: Clone + 'a>(label: String) -> Element<'a, M> {
-    container(
-        text(label)
-            .size(11)
-            .font(MONO)
-            .style(|t: &Theme| text::Style {
-                color: Some(if is_dark(t) {
-                    c("#A2ABBA")
-                } else {
-                    c("#3A4049")
-                }),
-            }),
-    )
-    .style(|t: &Theme| ContainerStyle {
-        background: Some(Background::Color(if is_dark(t) {
-            c("#1F2630")
-        } else {
-            c("#EEF0F3")
-        })),
-        border: Border {
-            color: if is_dark(t) {
-                c("#2A3240")
-            } else {
-                c("#DDE2E8")
-            },
-            width: 1.0,
-            radius: 4.0.into(),
-        },
-        ..Default::default()
-    })
-    .padding(Padding::from([2, 6]))
-    .into()
-}
