@@ -40,7 +40,6 @@ fn default_filename(now: SystemTime) -> String {
     format!("mc-scan-{y:04}{mo:02}{d:02}-{h:02}{mi:02}{s:02}Z.csv")
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
