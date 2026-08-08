@@ -51,6 +51,14 @@ pub enum OnlineModeFilter {
     Cracked,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WhitelistFilter {
+    #[default]
+    Any,
+    On,
+    Off,
+}
+
 #[derive(Default)]
 pub(super) struct Filters {
     pub(super) query: String,
@@ -58,6 +66,7 @@ pub(super) struct Filters {
     pub(super) descending: bool,
     pub(super) edition: EditionFilter,
     pub(super) online_mode: OnlineModeFilter,
+    pub(super) whitelist: WhitelistFilter,
     pub(super) version: String,
     pub(super) plugin: String,
 }
@@ -66,6 +75,7 @@ impl Filters {
     pub(super) fn active_count(&self) -> usize {
         usize::from(self.edition != EditionFilter::All)
             + usize::from(self.online_mode != OnlineModeFilter::Any)
+            + usize::from(self.whitelist != WhitelistFilter::Any)
             + usize::from(!self.version.trim().is_empty())
             + usize::from(!self.plugin.trim().is_empty())
     }
@@ -101,6 +111,7 @@ pub enum ResultsListMessage {
     SortDescending(bool),
     EditionPicked(EditionFilter),
     OnlineModePicked(OnlineModeFilter),
+    WhitelistPicked(WhitelistFilter),
     VersionFilter(String),
     PluginFilter(String),
     ResetFilters,
@@ -188,6 +199,7 @@ impl ResultsList {
             s.world = info.world;
             s.plugins = info.plugins;
             s.online_mode = info.online_mode;
+            s.whitelist = info.whitelist;
             s.ping_history.push(info.latency_ms);
             if s.ping_history.len() > 30 {
                 s.ping_history.remove(0);
@@ -249,6 +261,11 @@ impl ResultsList {
         self.view_dirty.set(true);
     }
 
+    pub fn set_whitelist(&mut self, wl: WhitelistFilter) {
+        self.filters.whitelist = wl;
+        self.view_dirty.set(true);
+    }
+
     pub fn set_version_filter(&mut self, text: String) {
         self.filters.version = text;
         self.view_dirty.set(true);
@@ -262,6 +279,7 @@ impl ResultsList {
     pub fn reset_filters(&mut self) {
         self.filters.edition = EditionFilter::All;
         self.filters.online_mode = OnlineModeFilter::Any;
+        self.filters.whitelist = WhitelistFilter::Any;
         self.filters.version.clear();
         self.filters.plugin.clear();
         self.view_dirty.set(true);
@@ -306,8 +324,12 @@ impl ResultsList {
         self.view_dirty.set(false);
     }
 
-    pub fn toolbar(&self, tr: &'static Tr) -> Element<'_, ResultsListMessage> {
-        toolbar::render(self, tr)
+    pub fn toolbar(
+        &self,
+        tr: &'static Tr,
+        show_login_filters: bool,
+    ) -> Element<'_, ResultsListMessage> {
+        toolbar::render(self, tr, show_login_filters)
     }
 
     pub fn view(&self, tr: &'static Tr) -> Element<'_, ResultsListMessage> {
@@ -371,6 +393,7 @@ fn passes_filters(
 ) -> bool {
     edition_matches(f.edition, &s.edition)
         && online_mode_matches(f.online_mode, s.online_mode)
+        && whitelist_matches(f.whitelist, s.whitelist)
         && (query.is_empty() || search_matches(s, query))
         && (version_q.is_empty()
             || strip_section_codes(&s.version)
@@ -395,6 +418,14 @@ fn online_mode_matches(filter: OnlineModeFilter, mode: Option<bool>) -> bool {
         OnlineModeFilter::Any => true,
         OnlineModeFilter::Online => mode == Some(true),
         OnlineModeFilter::Cracked => mode == Some(false),
+    }
+}
+
+fn whitelist_matches(filter: WhitelistFilter, whitelist: Option<bool>) -> bool {
+    match filter {
+        WhitelistFilter::Any => true,
+        WhitelistFilter::On => whitelist == Some(true),
+        WhitelistFilter::Off => whitelist == Some(false),
     }
 }
 

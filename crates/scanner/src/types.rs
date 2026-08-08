@@ -24,6 +24,13 @@ pub struct ModInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct Credentials {
+    pub username: String,
+    pub uuid: [u8; 16],
+    pub access_token: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct ServerInfo {
     pub addr: SocketAddr,
     pub edition: Edition,
@@ -48,6 +55,7 @@ pub struct ServerInfo {
 
     // Some(true)=online, Some(false)=cracked, None=undetermined
     pub online_mode: Option<bool>,
+    pub whitelist: Option<bool>,
 
     // Bedrock extras (unconnected pong)
     pub bedrock_edition: Option<String>,
@@ -78,6 +86,7 @@ impl ServerInfo {
             world: None,
             plugins: Vec::new(),
             online_mode: None,
+            whitelist: None,
             bedrock_edition: None,
             server_guid: None,
             sub_motd: None,

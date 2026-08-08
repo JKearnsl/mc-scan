@@ -1,5 +1,7 @@
 use crate::components::address_list::{AddressList, AddressListMessage};
-use crate::components::results_list::{ResultsList, ResultsListMessage};
+use crate::components::results_list::{
+    OnlineModeFilter, ResultsList, ResultsListMessage, WhitelistFilter,
+};
 use crate::components::{address_list, settings};
 use crate::i18n::{self, Language, Tr};
 use crate::styles::{COLOR_THEME, COLOR_THEME_LIGHT};
@@ -307,6 +309,7 @@ impl McScan {
                 ResultsListMessage::SortDescending(desc) => self.results.set_sort_descending(desc),
                 ResultsListMessage::EditionPicked(edition) => self.results.set_edition(edition),
                 ResultsListMessage::OnlineModePicked(mode) => self.results.set_online_mode(mode),
+                ResultsListMessage::WhitelistPicked(wl) => self.results.set_whitelist(wl),
                 ResultsListMessage::VersionFilter(text) => self.results.set_version_filter(text),
                 ResultsListMessage::PluginFilter(text) => self.results.set_plugin_filter(text),
                 ResultsListMessage::ResetFilters => self.results.reset_filters(),
@@ -323,7 +326,13 @@ impl McScan {
             Message::ConcurrencyChanged(v) => self.settings.concurrency = v,
             Message::TimeoutChanged(v) => self.settings.timeout_ms = v,
             Message::ToggleQuery(v) => self.settings.query_enabled = v,
-            Message::ToggleOnlineModeCheck(v) => self.settings.online_mode_check = v,
+            Message::ToggleOnlineModeCheck(v) => {
+                self.settings.online_mode_check = v;
+                if !v {
+                    self.results.set_online_mode(OnlineModeFilter::Any);
+                    self.results.set_whitelist(WhitelistFilter::Any);
+                }
+            }
 
             Message::OpenModal(kind) => {
                 if kind == ModalKind::AddRanges {
@@ -533,7 +542,7 @@ impl McScan {
         let (tx, rx) = oneshot::channel::<Option<ServerInfo>>();
         RUNTIME.spawn(async move {
             let result =
-                scanner::probe_server(addr, edition, timeout, query_enabled, online_mode_check)
+                scanner::probe_server(addr, edition, timeout, query_enabled, online_mode_check, None)
                     .await;
             let _ = tx.send(result);
         });

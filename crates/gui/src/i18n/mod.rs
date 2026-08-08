@@ -85,6 +85,7 @@ pub struct Tr {
     pub online_mode: &'static str,
     pub online_yes: &'static str,
     pub online_no: &'static str,
+    pub whitelist: &'static str,
     pub search: &'static str,
     pub no_matches: &'static str,
     pub sort_recent: &'static str,

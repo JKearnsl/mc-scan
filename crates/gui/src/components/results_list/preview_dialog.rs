@@ -184,6 +184,10 @@ pub fn render(app: &McScan) -> Element<'_, Message> {
         let v = if om { tr.online_yes } else { tr.online_no };
         extra_cells.push(cell(tr.online_mode, v.to_string(), false));
     }
+    if let Some(wl) = server.whitelist {
+        let v = if wl { tr.enabled } else { tr.disabled };
+        extra_cells.push(cell(tr.whitelist, v.to_string(), false));
+    }
     if !server.mods.is_empty() {
         extra_cells.push(cell(tr.mods, server.mods.len().to_string(), true));
     }

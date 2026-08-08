@@ -1,22 +1,26 @@
 use iced::Length::{Fill, Fixed};
-use iced::widget::{Space, button, column, container, row, svg, text, text_input};
+use iced::widget::{Column, Space, button, column, container, row, svg, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Padding, Shadow, Theme, Vector};
 
 use crate::components::ui::{caption, icons, popover, search_input};
 use crate::i18n::Tr;
 use crate::styles::{SANS, SANS_SEMIBOLD, c, is_dark};
 
-use super::{EditionFilter, OnlineModeFilter, ResultsList, ResultsListMessage, SortKey};
+use super::{EditionFilter, OnlineModeFilter, ResultsList, ResultsListMessage, SortKey, WhitelistFilter};
 
 type Msg = ResultsListMessage;
 
 const CONTROL_H: f32 = 34.0;
 
-pub(super) fn render<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> {
+pub(super) fn render<'a>(
+    list: &'a ResultsList,
+    tr: &'static Tr,
+    show_login_filters: bool,
+) -> Element<'a, Msg> {
     row![
         search_box(list, tr),
         sort_control(list, tr),
-        filter_control(list, tr),
+        filter_control(list, tr, show_login_filters),
     ]
     .spacing(10)
     .align_y(Alignment::Center)
@@ -184,7 +188,11 @@ fn sort_name(key: SortKey, tr: &'static Tr) -> &'static str {
     }
 }
 
-fn filter_control<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> {
+fn filter_control<'a>(
+    list: &'a ResultsList,
+    tr: &'static Tr,
+    show_login_filters: bool,
+) -> Element<'a, Msg> {
     let count = list.filters.active_count();
     let mut label = row![
         svg(icons::filter())
@@ -211,14 +219,18 @@ fn filter_control<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg
     let trigger = control_button(label, Msg::ToggleFilterMenu, count > 0);
     popover(
         trigger,
-        filter_panel(list, tr),
+        filter_panel(list, tr, show_login_filters),
         list.filters_open,
         Msg::DismissMenus,
     )
     .into()
 }
 
-fn filter_panel<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> {
+fn filter_panel<'a>(
+    list: &'a ResultsList,
+    tr: &'static Tr,
+    show_login_filters: bool,
+) -> Element<'a, Msg> {
     let edition = field(
         tr.edition,
         segmented(
@@ -242,6 +254,19 @@ fn filter_panel<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> 
             ],
             list.filters.online_mode,
             Msg::OnlineModePicked,
+        ),
+    );
+
+    let whitelist = field(
+        tr.whitelist,
+        segmented(
+            vec![
+                (tr.online_any, WhitelistFilter::Any),
+                (tr.enabled, WhitelistFilter::On),
+                (tr.disabled, WhitelistFilter::Off),
+            ],
+            list.filters.whitelist,
+            Msg::WhitelistPicked,
         ),
     );
 
@@ -272,11 +297,16 @@ fn filter_panel<'a>(list: &'a ResultsList, tr: &'static Tr) -> Element<'a, Msg> 
 
     let footer = row![Space::new().width(Fill), reset].align_y(Alignment::Center);
 
-    panel(
-        column![edition, online, version, plugin, footer].spacing(14),
-        300.0,
-        16.0,
-    )
+    let mut children: Vec<Element<'a, Msg>> = vec![edition];
+    if show_login_filters {
+        children.push(online);
+        children.push(whitelist);
+    }
+    children.push(version);
+    children.push(plugin);
+    children.push(footer.into());
+
+    panel(Column::with_children(children).spacing(14), 300.0, 16.0)
 }
 
 fn field<'a>(label: &'a str, control: Element<'a, Msg>) -> Element<'a, Msg> {

@@ -60,6 +60,7 @@ pub async fn probe_server(
     timeout_ms: u64,
     query_enabled: bool,
     online_mode_check: bool,
+    creds: Option<&types::Credentials>,
 ) -> Option<types::ServerInfo> {
     match edition {
         Edition::Java => {
@@ -79,8 +80,10 @@ pub async fn probe_server(
                 }
             }
             if online_mode_check {
-                info.online_mode = login::probe(addr, info.protocol, timeout_ms).await;
-                trace!(%addr, online_mode = ?info.online_mode, "online-mode probe");
+                let outcome = login::probe(addr, info.protocol, timeout_ms, creds).await;
+                info.online_mode = outcome.online_mode;
+                info.whitelist = outcome.whitelist;
+                trace!(%addr, online_mode = ?info.online_mode, whitelist = ?info.whitelist, "login probe");
             }
             Some(info)
         }
